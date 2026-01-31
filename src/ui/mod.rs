@@ -275,22 +275,36 @@ pub fn run_app(
             f.render_widget(tools_list, middle_chunks[2]);
 
             // Bottom preview and help
-            // Make room for preview (min 4 lines) and a help bar (3 rows to allow borders)
+            // Reserve 3 rows for the preview (border + 1 inner line + border)
+            // and 3 rows for the help bar so the preview keeps its border and title
             let bottom_chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(4), Constraint::Length(3)].as_ref())
+                .constraints([Constraint::Length(3), Constraint::Length(3)].as_ref())
                 .split(chunks[2]);
 
             let (sel_text, _sel_index) = app.focused_selection();
             // show only the previewed command (no redundant 'Preview:' label)
-            let preview_text = format!("    {}", sel_text);
-            let preview = Paragraph::new(preview_text)
-                .block(Block::default().borders(Borders::ALL).title(Span::styled(
-                    " Preview ",
-                    Style::default().add_modifier(Modifier::BOLD),
-                )))
+            let preview_line = format!("{}", sel_text);
+
+            // Draw bordered preview and render a single-line paragraph inside
+            let preview_area = bottom_chunks[0];
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .title(Span::styled(" Preview ", Style::default().add_modifier(Modifier::BOLD)))
+                .title_alignment(Alignment::Center);
+            f.render_widget(block, preview_area);
+
+            let inner = Rect {
+                x: preview_area.x + 1,
+                y: preview_area.y + 1,
+                width: preview_area.width.saturating_sub(2),
+                // force a single-line inner area so only one row is displayed
+                height: 1,
+            };
+            let inner_para = Paragraph::new(vec![Spans::from(Span::raw(preview_line))])
+                .alignment(Alignment::Left)
                 .wrap(Wrap { trim: true });
-            f.render_widget(preview, bottom_chunks[0]);
+            f.render_widget(inner_para, inner);
 
             // Single-line concise help bar
             let help_line = Spans::from(Span::styled(
