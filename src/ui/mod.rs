@@ -5,6 +5,8 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Span, Spans};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
 use ratatui::Terminal;
+mod title;
+use title::title_spans;
 use std::io;
 use std::time::{Duration, Instant};
 
@@ -128,14 +130,9 @@ pub fn run_app(
                 )
                 .split(size);
 
-            // Title area
-            let title = Paragraph::new(Spans::from(vec![Span::styled(
-                "CALLBOT — Handy scripts launcher for project, servers and tooling",
-                Style::default()
-                    .fg(Color::Rgb(255, 165, 0))
-                    .add_modifier(Modifier::BOLD),
-            )]))
-            .alignment(Alignment::Center);
+            // Title area: use figlet if available, otherwise fallback
+            let title_lines = title_spans();
+            let title = Paragraph::new(title_lines).alignment(Alignment::Center);
             f.render_widget(title, chunks[0]);
 
             // Middle columns
@@ -221,14 +218,12 @@ pub fn run_app(
             // Bottom preview and help
             let bottom_chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(4), Constraint::Length(1)].as_ref())
+                .constraints([Constraint::Min(4), Constraint::Length(2)].as_ref())
                 .split(chunks[2]);
 
             let (sel_text, _sel_index) = app.focused_selection();
-            let preview_text = format!(
-                "\n  Preview:\n\n    {}\n\n    (Press Enter for details)",
-                sel_text
-            );
+            // show only the previewed command (no redundant 'Preview:' label)
+            let preview_text = format!("    {}", sel_text);
             let preview = Paragraph::new(preview_text)
                 .block(Block::default().borders(Borders::ALL).title(Span::styled(
                     " Preview ",
@@ -237,10 +232,12 @@ pub fn run_app(
                 .wrap(Wrap { trim: true });
             f.render_widget(preview, bottom_chunks[0]);
 
-            let help = Paragraph::new(Spans::from(Span::raw(
-                "Tab: switch column • ↑/↓: navigate • Enter: open • q: quit",
-            )))
-            .alignment(Alignment::Left);
+            // Render help area with multiple lines to ensure content fits inside the bordered block
+            let help_lines = vec![
+                Spans::from(Span::raw("Tab: switch column    Up/Down: navigate")),
+                Spans::from(Span::raw("Enter: open details  e: echo  r: run  q: quit")),
+            ];
+            let help = Paragraph::new(help_lines).alignment(Alignment::Left);
             let help = help.block(Block::default().borders(Borders::ALL).title(Span::styled(
                 " Help ",
                 Style::default().add_modifier(Modifier::BOLD),

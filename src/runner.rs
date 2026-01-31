@@ -6,7 +6,6 @@ use crossterm::terminal::{
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::error::Error;
-use std::io;
 use std::process::Command;
 
 pub fn dry_run_command(
