@@ -291,7 +291,7 @@ pub fn run_app(
             let block = Block::default()
                 .borders(Borders::ALL)
                 .title(Span::styled(" Preview ", Style::default().add_modifier(Modifier::BOLD)))
-                .title_alignment(Alignment::Center);
+                .title_alignment(Alignment::Left);
             f.render_widget(block, preview_area);
 
             let inner = Rect {
