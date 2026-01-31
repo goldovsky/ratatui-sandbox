@@ -169,7 +169,8 @@ pub fn run_app(
                 .iter()
                 .enumerate()
                 .map(|(i, a)| {
-                    let content = vec![Spans::from(Span::raw(a.clone()))];
+                    // add left/right padding inside the list so items don't touch the border
+                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.clone())))];
                     ListItem::new(content).style(
                         if app.focused_column == 0 && app.project_selected == i {
                             Style::default().fg(Color::Yellow)
@@ -208,7 +209,8 @@ pub fn run_app(
                 .iter()
                 .enumerate()
                 .map(|(i, a)| {
-                    ListItem::new(Spans::from(Span::raw(a.clone()))).style(
+                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.clone())))];
+                    ListItem::new(content).style(
                         if app.focused_column == 1 && app.server_selected == i {
                             Style::default().fg(Color::Yellow)
                         } else {
@@ -244,7 +246,8 @@ pub fn run_app(
                 .iter()
                 .enumerate()
                 .map(|(i, a)| {
-                    ListItem::new(Spans::from(Span::raw(a.clone()))).style(
+                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.clone())))];
+                    ListItem::new(content).style(
                         if app.focused_column == 2 && app.tools_selected == i {
                             Style::default().fg(Color::Yellow)
                         } else {
@@ -284,7 +287,7 @@ pub fn run_app(
 
             let (sel_text, _sel_index) = app.focused_selection();
             // show only the previewed command (no redundant 'Preview:' label)
-            let preview_line = format!("{}", sel_text);
+            let preview_line = format!("  {}  ", sel_text);
 
             // Draw bordered preview and render a single-line paragraph inside
             let preview_area = bottom_chunks[0];
@@ -301,9 +304,13 @@ pub fn run_app(
                 // force a single-line inner area so only one row is displayed
                 height: 1,
             };
-            let inner_para = Paragraph::new(vec![Spans::from(Span::raw(preview_line))])
-                .alignment(Alignment::Left)
-                .wrap(Wrap { trim: true });
+            let inner_para = Paragraph::new(vec![Spans::from(vec![
+                Span::raw("  "),
+                Span::raw(sel_text.clone()),
+                Span::raw("  "),
+            ])])
+            .alignment(Alignment::Left)
+            .wrap(Wrap { trim: false });
             f.render_widget(inner_para, inner);
 
             // Single-line concise help bar
@@ -329,19 +336,25 @@ pub fn run_app(
                     width: help_area.width.saturating_sub(2),
                     height: help_area.height.saturating_sub(2),
                 };
-                let inner_para = Paragraph::new(vec![Spans::from(Span::styled(
-                    "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close",
-                    Style::default().fg(Color::Rgb(150, 150, 150)),
-                ))])
+                let help_text = "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close";
+                let inner_para = Paragraph::new(vec![Spans::from(vec![
+                    Span::raw("  "),
+                    Span::styled(help_text, Style::default().fg(Color::Rgb(150, 150, 150))),
+                    Span::raw("  "),
+                ])])
                 .alignment(Alignment::Left)
-                .wrap(Wrap { trim: true });
+                .wrap(Wrap { trim: false });
                 f.render_widget(inner_para, inner);
             } else {
                 // cramped: render help text plainly so it's visible
-                let compact = Paragraph::new(vec![Spans::from(Span::styled(
-                    "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close",
-                    Style::default().fg(Color::Rgb(150, 150, 150)),
-                ))])
+                let compact = Paragraph::new(vec![Spans::from(vec![
+                    Span::raw("  "),
+                    Span::styled(
+                        "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close",
+                        Style::default().fg(Color::Rgb(150, 150, 150)),
+                    ),
+                    Span::raw("  "),
+                ])])
                 .alignment(Alignment::Left);
                 f.render_widget(compact, help_area);
             }
