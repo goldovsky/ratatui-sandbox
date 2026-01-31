@@ -180,12 +180,18 @@ pub fn run_app(
                 })
                 .collect();
 
-            // Use a short literal title so Block will render it and preserve the top border
-            let project_title = " Projects ".to_string();
-            let project_list =
-                List::new(project_items).block(Block::default().borders(Borders::ALL).title(
-                    Span::styled(project_title, Style::default().add_modifier(Modifier::BOLD)),
-                ));
+            // Use short literal title and let Block center it via title_alignment so
+            // the top border's horizontal lines remain visible.
+            let project_title = "Projects".to_string();
+            let project_list = List::new(project_items).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(Span::styled(
+                        project_title,
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ))
+                    .title_alignment(Alignment::Center),
+            );
             f.render_widget(project_list, middle_chunks[0]);
 
             // Server column
@@ -204,11 +210,16 @@ pub fn run_app(
                 })
                 .collect();
 
-            let server_title = " Servers ".to_string();
-            let server_list =
-                List::new(server_items).block(Block::default().borders(Borders::ALL).title(
-                    Span::styled(server_title, Style::default().add_modifier(Modifier::BOLD)),
-                ));
+            let server_title = "Servers".to_string();
+            let server_list = List::new(server_items).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(Span::styled(
+                        server_title,
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ))
+                    .title_alignment(Alignment::Center),
+            );
             f.render_widget(server_list, middle_chunks[1]);
 
             // Tools column
@@ -227,11 +238,16 @@ pub fn run_app(
                 })
                 .collect();
 
-            let tools_title = " Tools ".to_string();
-            let tools_list =
-                List::new(tools_items).block(Block::default().borders(Borders::ALL).title(
-                    Span::styled(tools_title, Style::default().add_modifier(Modifier::BOLD)),
-                ));
+            let tools_title = "Tools".to_string();
+            let tools_list = List::new(tools_items).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(Span::styled(
+                        tools_title,
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ))
+                    .title_alignment(Alignment::Center),
+            );
             f.render_widget(tools_list, middle_chunks[2]);
 
             // Bottom preview and help
