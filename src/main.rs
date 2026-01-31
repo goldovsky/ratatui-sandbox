@@ -1,121 +1,41 @@
-use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
+use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+};
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
-use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Span, Spans};
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
 use ratatui::Terminal;
 use std::error::Error;
 use std::io;
-use std::time::{Duration, Instant};
 
-struct App {
-    project_actions: Vec<String>,
-    server_actions: Vec<String>,
-    tools_actions: Vec<String>,
-    project_selected: usize,
-    server_selected: usize,
-    tools_selected: usize,
-    focused_column: usize, // 0 project, 1 server, 2 tools
-}
+mod runner;
+mod ui;
 
-impl App {
-    fn new() -> Self {
-        Self {
-            project_actions: vec![
-                "New Project".into(),
-                "Open Project".into(),
-                "Build".into(),
-                "Test".into(),
-            ],
-            server_actions: vec![
-                "Start Dev Server".into(),
-                "Stop Server".into(),
-                "Restart".into(),
-                "Logs".into(),
-            ],
-            tools_actions: vec!["Simulate Call".into(), "Lint".into(), "Format".into()],
-            project_selected: 0,
-            server_selected: 0,
-            tools_selected: 0,
-            focused_column: 0,
-        }
-    }
-
-    fn move_up(&mut self) {
-        match self.focused_column {
-            0 => {
-                if self.project_selected > 0 {
-                    self.project_selected -= 1;
-                }
-            }
-            1 => {
-                if self.server_selected > 0 {
-                    self.server_selected -= 1;
-                }
-            }
-            2 => {
-                if self.tools_selected > 0 {
-                    self.tools_selected -= 1;
-                }
-            }
-            _ => {}
-        }
-    }
-
-    fn move_down(&mut self) {
-        match self.focused_column {
-            0 => {
-                if self.project_selected + 1 < self.project_actions.len() {
-                    self.project_selected += 1;
-                }
-            }
-            1 => {
-                if self.server_selected + 1 < self.server_actions.len() {
-                    self.server_selected += 1;
-                }
-            }
-            2 => {
-                if self.tools_selected + 1 < self.tools_actions.len() {
-                    self.tools_selected += 1;
-                }
-            }
-            _ => {}
-        }
-    }
-
-    fn focused_selection(&self) -> (String, usize) {
-        match self.focused_column {
-            0 => (
-                self.project_actions[self.project_selected].clone(),
-                self.project_selected,
-            ),
-            1 => (
-                self.server_actions[self.server_selected].clone(),
-                self.server_selected,
-            ),
-            2 => (
-                self.tools_actions[self.tools_selected].clone(),
-                self.tools_selected,
-            ),
-            _ => ("".into(), 0),
-        }
-    }
-}
+use ui::run_app as ui_run_app;
+use ui::App as UiApp;
 
 fn main() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    crossterm::execute!(stdout, EnableMouseCapture)?;
+    // switch to the alternate screen and enable mouse capture so the app does not
+    // leave UI artifacts on the main terminal when it exits
+    crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+    // ensure the alternate screen is cleared and hide the cursor while the app runs
+    terminal.clear()?;
+    terminal.hide_cursor()?;
 
-    let app = App::new();
-    let res = run_app(&mut terminal, app);
+    // create the UI app and hand off to the ui module
+    let app = UiApp::new();
+    let res = ui_run_app(&mut terminal, app);
 
+    // restore terminal state
     disable_raw_mode()?;
-    crossterm::execute!(terminal.backend_mut(), DisableMouseCapture)?;
+    crossterm::execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     terminal.show_cursor()?;
 
     if let Err(err) = res {
@@ -123,239 +43,4 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
-}
-
-fn run_app(
-    terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
-    mut app: App,
-) -> io::Result<()> {
-    let tick_rate = Duration::from_millis(200);
-    let mut last_tick = Instant::now();
-
-    loop {
-        terminal.draw(|f| {
-            let size = f.size();
-
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .margin(1)
-                .constraints(
-                    [
-                        Constraint::Length(7),
-                        Constraint::Min(10),
-                        Constraint::Length(6),
-                    ]
-                    .as_ref(),
-                )
-                .split(size);
-
-            // Title area
-            let title = Paragraph::new(Spans::from(vec![Span::styled(
-                "CALLBOT — Handy scripts launcher for project, servers and tooling",
-                Style::default()
-                    .fg(Color::Rgb(255, 165, 0))
-                    .add_modifier(Modifier::BOLD),
-            )]))
-            .alignment(Alignment::Center);
-            f.render_widget(title, chunks[0]);
-
-            // Middle columns
-            let middle_chunks = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints(
-                    [
-                        Constraint::Percentage(33),
-                        Constraint::Percentage(34),
-                        Constraint::Percentage(33),
-                    ]
-                    .as_ref(),
-                )
-                .split(chunks[1]);
-
-            // Project column
-            let project_items: Vec<ListItem> = app
-                .project_actions
-                .iter()
-                .enumerate()
-                .map(|(i, a)| {
-                    let content = vec![Spans::from(Span::raw(a.clone()))];
-                    ListItem::new(content).style(
-                        if app.focused_column == 0 && app.project_selected == i {
-                            Style::default().fg(Color::Yellow)
-                        } else {
-                            Style::default()
-                        },
-                    )
-                })
-                .collect();
-
-            let project_list =
-                List::new(project_items).block(Block::default().borders(Borders::ALL).title(
-                    Span::styled(" Projects ", Style::default().add_modifier(Modifier::BOLD)),
-                ));
-            f.render_widget(project_list, middle_chunks[0]);
-
-            // Server column
-            let server_items: Vec<ListItem> = app
-                .server_actions
-                .iter()
-                .enumerate()
-                .map(|(i, a)| {
-                    ListItem::new(Spans::from(Span::raw(a.clone()))).style(
-                        if app.focused_column == 1 && app.server_selected == i {
-                            Style::default().fg(Color::Yellow)
-                        } else {
-                            Style::default()
-                        },
-                    )
-                })
-                .collect();
-
-            let server_list =
-                List::new(server_items).block(Block::default().borders(Borders::ALL).title(
-                    Span::styled(" Servers ", Style::default().add_modifier(Modifier::BOLD)),
-                ));
-            f.render_widget(server_list, middle_chunks[1]);
-
-            // Tools column
-            let tools_items: Vec<ListItem> = app
-                .tools_actions
-                .iter()
-                .enumerate()
-                .map(|(i, a)| {
-                    ListItem::new(Spans::from(Span::raw(a.clone()))).style(
-                        if app.focused_column == 2 && app.tools_selected == i {
-                            Style::default().fg(Color::Yellow)
-                        } else {
-                            Style::default()
-                        },
-                    )
-                })
-                .collect();
-
-            let tools_list =
-                List::new(tools_items).block(Block::default().borders(Borders::ALL).title(
-                    Span::styled(" Tools ", Style::default().add_modifier(Modifier::BOLD)),
-                ));
-            f.render_widget(tools_list, middle_chunks[2]);
-
-            // Bottom preview and help
-            let bottom_chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Min(4), Constraint::Length(1)].as_ref())
-                .split(chunks[2]);
-
-            let (sel_text, _sel_index) = app.focused_selection();
-            let preview_text = format!(
-                "\n  Preview:\n\n    {}\n\n    (Press Enter for details)",
-                sel_text
-            );
-            let preview = Paragraph::new(preview_text)
-                .block(Block::default().borders(Borders::ALL).title(Span::styled(
-                    " Preview ",
-                    Style::default().add_modifier(Modifier::BOLD),
-                )))
-                .wrap(Wrap { trim: true });
-            f.render_widget(preview, bottom_chunks[0]);
-
-            let help = Paragraph::new(Spans::from(Span::raw(
-                "Tab: switch column • ↑/↓: navigate • Enter: open • q: quit",
-            )))
-            .alignment(Alignment::Left);
-            let help = help.block(Block::default().borders(Borders::ALL).title(Span::styled(
-                " Help ",
-                Style::default().add_modifier(Modifier::BOLD),
-            )));
-            f.render_widget(help, bottom_chunks[1]);
-        })?;
-
-        let timeout = tick_rate
-            .checked_sub(last_tick.elapsed())
-            .unwrap_or_else(|| Duration::from_secs(0));
-
-        if crossterm::event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Tab => app.focused_column = (app.focused_column + 1) % 3,
-                    KeyCode::Up => app.move_up(),
-                    KeyCode::Down => app.move_down(),
-                    KeyCode::Enter => {
-                        // show modal preview
-                        show_preview(terminal, &app)?;
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        if last_tick.elapsed() >= tick_rate {
-            last_tick = Instant::now();
-        }
-    }
-}
-
-fn show_preview(
-    terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
-    app: &App,
-) -> io::Result<()> {
-    loop {
-        terminal.draw(|f| {
-            let size = f.size();
-            let area = centered_rect(60, 40, size);
-            let block = Block::default().borders(Borders::ALL).title(Span::styled(
-                " Details ",
-                Style::default().add_modifier(Modifier::BOLD),
-            ));
-            f.render_widget(block, area);
-
-            let inner = Rect {
-                x: area.x + 1,
-                y: area.y + 1,
-                width: area.width - 2,
-                height: area.height - 2,
-            };
-            let (sel_text, _sel_index) = app.focused_selection();
-            let text = Paragraph::new(Spans::from(vec![Span::raw(format!(
-                "Detailed preview for: {}",
-                sel_text
-            ))]))
-            .alignment(Alignment::Left)
-            .wrap(Wrap { trim: true });
-            f.render_widget(text, inner);
-        })?;
-
-        if crossterm::event::poll(Duration::from_millis(200))? {
-            if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Esc | KeyCode::Enter => return Ok(()),
-                    _ => {}
-                }
-            }
-        }
-    }
-}
-
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
-
-    let vertical = popup_layout[1];
-
-    let horizontal_layout = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(vertical);
-
-    horizontal_layout[1]
 }

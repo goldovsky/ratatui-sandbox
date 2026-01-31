@@ -1,0 +1,55 @@
+# Ignore Rust build artifacts
+/target/
+
+# Bytecode / metadata
+*.rmeta
+*.rlib
+
+# Incremental compilation and build products
+/target/**/incremental/
+/target/**/work-products.bin
+
+# Compiled dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Executables
+*.exe
+*.out
+
+# Debugging files
+*.pdb
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Swap and temporary files
+*~
+*.swp
+.#*
+
+# Environment files / secrets
+.env
+.env.*
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+lcov.info
+
+# Node / frontend artifacts (if any)
+node_modules/
+dist/
+
+# keep Cargo.lock tracked for applications; if you want to ignore it for a library,
+# uncomment the next line:
+# Cargo.lock
