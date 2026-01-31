@@ -129,7 +129,7 @@ pub fn run_app(
                     [
                         Constraint::Length(title_height),
                         Constraint::Min(10),
-                        Constraint::Length(6),
+                        Constraint::Length(7),
                     ]
                     .as_ref(),
                 )
@@ -275,9 +275,10 @@ pub fn run_app(
             f.render_widget(tools_list, middle_chunks[2]);
 
             // Bottom preview and help
+            // Make room for three help lines (navigation + commands + dialog keys)
             let bottom_chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(4), Constraint::Length(2)].as_ref())
+                .constraints([Constraint::Min(4), Constraint::Length(3)].as_ref())
                 .split(chunks[2]);
 
             let (sel_text, _sel_index) = app.focused_selection();
@@ -293,10 +294,22 @@ pub fn run_app(
 
             // Render help area with multiple lines to ensure content fits inside the bordered block
             let help_lines = vec![
-                Spans::from(Span::raw("Tab: switch column    Up/Down: navigate")),
-                Spans::from(Span::raw("Enter: open details  e: echo  r: run  q: quit")),
+                Spans::from(Span::styled(
+                    "↹  switch column    ↑ /↓  navigate",
+                    Style::default().fg(Color::Rgb(150, 150, 150)),
+                )),
+                Spans::from(Span::styled(
+                    "Enter: open details (then 'e' to Echo / 'r' to Run)",
+                    Style::default().fg(Color::Rgb(150, 150, 150)),
+                )),
+                Spans::from(Span::styled(
+                    "q: quit    Space/Enter: confirm in dialogs    Esc: close dialogs",
+                    Style::default().fg(Color::Rgb(150, 150, 150)),
+                )),
             ];
-            let help = Paragraph::new(help_lines).alignment(Alignment::Left);
+            let help = Paragraph::new(help_lines)
+                .alignment(Alignment::Left)
+                .wrap(Wrap { trim: true });
             let help = help.block(Block::default().borders(Borders::ALL).title(Span::styled(
                 " Help ",
                 Style::default().add_modifier(Modifier::BOLD),
