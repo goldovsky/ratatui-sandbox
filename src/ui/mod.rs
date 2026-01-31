@@ -182,7 +182,15 @@ pub fn run_app(
 
             // Use short literal title and let Block center it via title_alignment so
             // the top border's horizontal lines remain visible.
-            let project_title = "Projects".to_string();
+            let project_title = {
+                let inner = middle_chunks[0].width as usize;
+                let core = "Projects";
+                if inner > core.len() + 2 {
+                    format!(" {} ", core)
+                } else {
+                    core.to_string()
+                }
+            };
             let project_list = List::new(project_items).block(
                 Block::default()
                     .borders(Borders::ALL)
@@ -210,7 +218,15 @@ pub fn run_app(
                 })
                 .collect();
 
-            let server_title = "Servers".to_string();
+            let server_title = {
+                let inner = middle_chunks[1].width as usize;
+                let core = "Servers";
+                if inner > core.len() + 2 {
+                    format!(" {} ", core)
+                } else {
+                    core.to_string()
+                }
+            };
             let server_list = List::new(server_items).block(
                 Block::default()
                     .borders(Borders::ALL)
@@ -238,7 +254,15 @@ pub fn run_app(
                 })
                 .collect();
 
-            let tools_title = "Tools".to_string();
+            let tools_title = {
+                let inner = middle_chunks[2].width as usize;
+                let core = "Tools";
+                if inner > core.len() + 2 {
+                    format!(" {} ", core)
+                } else {
+                    core.to_string()
+                }
+            };
             let tools_list = List::new(tools_items).block(
                 Block::default()
                     .borders(Borders::ALL)
