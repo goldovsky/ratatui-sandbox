@@ -275,7 +275,7 @@ pub fn run_app(
             f.render_widget(tools_list, middle_chunks[2]);
 
             // Bottom preview and help
-            // Make room for three help lines (navigation + commands + dialog keys)
+            // Make room for preview (min 4 lines) and a help bar (3 rows to allow borders)
             let bottom_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Min(4), Constraint::Length(3)].as_ref())
@@ -292,29 +292,45 @@ pub fn run_app(
                 .wrap(Wrap { trim: true });
             f.render_widget(preview, bottom_chunks[0]);
 
-            // Render help area with multiple lines to ensure content fits inside the bordered block
-            let help_lines = vec![
-                Spans::from(Span::styled(
-                    "↹  switch column    ↑ /↓  navigate",
+            // Single-line concise help bar
+            let help_line = Spans::from(Span::styled(
+                "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close",
+                Style::default().fg(Color::Rgb(150, 150, 150)),
+            ));
+            let help = Paragraph::new(help_line).alignment(Alignment::Left);
+
+            // If the help area is tall enough, render a bordered block and draw the
+            // help text inside the block inner rect. Otherwise render the help line
+            // directly (no border) so it remains visible on small terminals.
+            let help_area = bottom_chunks[1];
+            if help_area.height >= 3 {
+                let block = Block::default()
+                    .borders(Borders::ALL)
+                    .title(Span::styled(" Help ", Style::default().add_modifier(Modifier::BOLD)));
+                f.render_widget(block, help_area);
+
+                let inner = Rect {
+                    x: help_area.x + 1,
+                    y: help_area.y + 1,
+                    width: help_area.width.saturating_sub(2),
+                    height: help_area.height.saturating_sub(2),
+                };
+                let inner_para = Paragraph::new(vec![Spans::from(Span::styled(
+                    "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close",
                     Style::default().fg(Color::Rgb(150, 150, 150)),
-                )),
-                Spans::from(Span::styled(
-                    "Enter: open details (then 'e' to Echo / 'r' to Run)",
-                    Style::default().fg(Color::Rgb(150, 150, 150)),
-                )),
-                Spans::from(Span::styled(
-                    "q: quit    Space/Enter: confirm in dialogs    Esc: close dialogs",
-                    Style::default().fg(Color::Rgb(150, 150, 150)),
-                )),
-            ];
-            let help = Paragraph::new(help_lines)
+                ))])
                 .alignment(Alignment::Left)
                 .wrap(Wrap { trim: true });
-            let help = help.block(Block::default().borders(Borders::ALL).title(Span::styled(
-                " Help ",
-                Style::default().add_modifier(Modifier::BOLD),
-            )));
-            f.render_widget(help, bottom_chunks[1]);
+                f.render_widget(inner_para, inner);
+            } else {
+                // cramped: render help text plainly so it's visible
+                let compact = Paragraph::new(vec![Spans::from(Span::styled(
+                    "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close",
+                    Style::default().fg(Color::Rgb(150, 150, 150)),
+                ))])
+                .alignment(Alignment::Left);
+                f.render_widget(compact, help_area);
+            }
         })?;
 
         let timeout = tick_rate
