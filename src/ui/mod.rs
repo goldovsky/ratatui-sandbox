@@ -135,17 +135,17 @@ pub fn run_app(
                 )
                 .split(size);
 
-            // If figlet produced lines, the last line is the subtitle only when figlet failed.
-            // To ensure the subtitle is always visible, render a separate subtitle row below
-            // the figlet output.
-            let mut title_body = title_lines.clone();
-            // ensure there's an explicit subtitle at the end
+            // To ensure the subtitle is always visible and positioned right below the
+            // figlet output, render the figlet lines then the subtitle then a blank line.
+            let mut title_body: Vec<Spans> = Vec::new();
+            title_body.extend(title_lines.clone());
+            // subtitle
             title_body.push(Spans::from(Span::styled(
                 "Handy scripts launcher for project, servers and tooling",
-                Style::default()
-                    .fg(Color::Rgb(255, 165, 0))
-                    .add_modifier(Modifier::BOLD),
+                Style::default().fg(Color::Rgb(150, 150, 150)),
             )));
+            // one empty row below subtitle
+            title_body.push(Spans::from(Span::raw("")));
 
             let title = Paragraph::new(title_body).alignment(Alignment::Center);
             f.render_widget(title, chunks[0]);

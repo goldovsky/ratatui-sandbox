@@ -17,11 +17,19 @@ pub fn title_spans() -> Vec<Spans<'static>> {
         {
             if output.status.success() {
                 if let Ok(s) = String::from_utf8(output.stdout) {
-                    return s
-                        .lines()
+                    // collect lines and trim leading/trailing empty lines produced by some figlet fonts
+                    let mut lines: Vec<String> = s.lines().map(|l| l.to_string()).collect();
+                    while lines.last().map(|l| l.trim().is_empty()).unwrap_or(false) {
+                        lines.pop();
+                    }
+                    while lines.first().map(|l| l.trim().is_empty()).unwrap_or(false) {
+                        lines.remove(0);
+                    }
+                    return lines
+                        .into_iter()
                         .map(|l| {
                             Spans::from(Span::styled(
-                                l.to_string(),
+                                l,
                                 Style::default().fg(Color::Rgb(255, 165, 0)),
                             ))
                         })
@@ -35,11 +43,18 @@ pub fn title_spans() -> Vec<Spans<'static>> {
     if let Ok(output) = Command::new("figlet").arg("CALLBOT").output() {
         if output.status.success() {
             if let Ok(s) = String::from_utf8(output.stdout) {
-                return s
-                    .lines()
+                let mut lines: Vec<String> = s.lines().map(|l| l.to_string()).collect();
+                while lines.last().map(|l| l.trim().is_empty()).unwrap_or(false) {
+                    lines.pop();
+                }
+                while lines.first().map(|l| l.trim().is_empty()).unwrap_or(false) {
+                    lines.remove(0);
+                }
+                return lines
+                    .into_iter()
                     .map(|l| {
                         Spans::from(Span::styled(
-                            l.to_string(),
+                            l,
                             Style::default().fg(Color::Rgb(255, 165, 0)),
                         ))
                     })
