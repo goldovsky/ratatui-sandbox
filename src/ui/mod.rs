@@ -180,9 +180,11 @@ pub fn run_app(
                 })
                 .collect();
 
+            // Use a short literal title so Block will render it and preserve the top border
+            let project_title = " Projects ".to_string();
             let project_list =
                 List::new(project_items).block(Block::default().borders(Borders::ALL).title(
-                    Span::styled(" Projects ", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(project_title, Style::default().add_modifier(Modifier::BOLD)),
                 ));
             f.render_widget(project_list, middle_chunks[0]);
 
@@ -202,9 +204,10 @@ pub fn run_app(
                 })
                 .collect();
 
+            let server_title = " Servers ".to_string();
             let server_list =
                 List::new(server_items).block(Block::default().borders(Borders::ALL).title(
-                    Span::styled(" Servers ", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(server_title, Style::default().add_modifier(Modifier::BOLD)),
                 ));
             f.render_widget(server_list, middle_chunks[1]);
 
@@ -224,9 +227,10 @@ pub fn run_app(
                 })
                 .collect();
 
+            let tools_title = " Tools ".to_string();
             let tools_list =
                 List::new(tools_items).block(Block::default().borders(Borders::ALL).title(
-                    Span::styled(" Tools ", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(tools_title, Style::default().add_modifier(Modifier::BOLD)),
                 ));
             f.render_widget(tools_list, middle_chunks[2]);
 
