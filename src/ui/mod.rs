@@ -13,31 +13,52 @@ use title::title_spans;
 use crate::runner::{dry_run_command, run_command};
 
 pub struct App {
-    pub project_actions: Vec<String>,
-    pub server_actions: Vec<String>,
-    pub tools_actions: Vec<String>,
+    pub project_actions: Vec<Action>,
+    pub server_actions: Vec<Action>,
+    pub tools_actions: Vec<Action>,
     pub project_selected: usize,
     pub server_selected: usize,
     pub tools_selected: usize,
     pub focused_column: usize, // 0 project, 1 server, 2 tools
 }
 
+// Simple action: label shown in the list, template shown in the preview
+pub struct Action {
+    pub label: String,
+    pub template: String,
+}
+
 impl App {
     pub fn new() -> Self {
         Self {
             project_actions: vec![
-                "New Project".into(),
-                "Open Project".into(),
-                "Build".into(),
-                "Test".into(),
+                Action {
+                    label: "Create Merge Requests".into(),
+                    template: "cmr".into(),
+                },
+                Action {
+                    label: "Format Merge Requests (for Teams)".into(),
+                    template: "fmr".into(),
+                },
+                Action {
+                    label: "Deploy Snapshot (in QLF)".into(),
+                    template: "deploySnapshot.sh".into(),
+                },
             ],
             server_actions: vec![
-                "Start Dev Server".into(),
-                "Stop Server".into(),
-                "Restart".into(),
-                "Logs".into(),
+                Action {
+                    label: "Get BDD Dumps".into(),
+                    template: "getLastDump.sh -e {ENV} -p {PROJECT}".into(),
+                },
+                Action {
+                    label: "SSH to remote Servers".into(),
+                    template: "callbotConnect.sh {ENV} {SERVER}".into(),
+                },
             ],
-            tools_actions: vec!["Simulate Call".into(), "Lint".into(), "Format".into()],
+            tools_actions: vec![Action {
+                label: "Simulate Calls".into(),
+                template: "Simulate Calls {ENV} {BOT_ID} {PHONE_NUMBER} {TYPE} {OPTIONS}".into(),
+            }],
             project_selected: 0,
             server_selected: 0,
             tools_selected: 0,
@@ -90,15 +111,15 @@ impl App {
     fn focused_selection(&self) -> (String, usize) {
         match self.focused_column {
             0 => (
-                self.project_actions[self.project_selected].clone(),
+                self.project_actions[self.project_selected].label.clone(),
                 self.project_selected,
             ),
             1 => (
-                self.server_actions[self.server_selected].clone(),
+                self.server_actions[self.server_selected].label.clone(),
                 self.server_selected,
             ),
             2 => (
-                self.tools_actions[self.tools_selected].clone(),
+                self.tools_actions[self.tools_selected].label.clone(),
                 self.tools_selected,
             ),
             _ => ("".into(), 0),
@@ -170,7 +191,7 @@ pub fn run_app(
                 .enumerate()
                 .map(|(i, a)| {
                     // add left/right padding inside the list so items don't touch the border
-                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.clone())))];
+                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.label.clone())))];
                     ListItem::new(content).style(
                         if app.focused_column == 0 && app.project_selected == i {
                             Style::default().fg(Color::Yellow)
@@ -209,7 +230,7 @@ pub fn run_app(
                 .iter()
                 .enumerate()
                 .map(|(i, a)| {
-                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.clone())))];
+                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.label.clone())))];
                     ListItem::new(content).style(
                         if app.focused_column == 1 && app.server_selected == i {
                             Style::default().fg(Color::Yellow)
@@ -246,7 +267,7 @@ pub fn run_app(
                 .iter()
                 .enumerate()
                 .map(|(i, a)| {
-                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.clone())))];
+                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.label.clone())))];
                     ListItem::new(content).style(
                         if app.focused_column == 2 && app.tools_selected == i {
                             Style::default().fg(Color::Yellow)
@@ -285,9 +306,13 @@ pub fn run_app(
                 .constraints([Constraint::Length(3), Constraint::Length(3)].as_ref())
                 .split(chunks[2]);
 
-            let (sel_text, _sel_index) = app.focused_selection();
-            // show only the previewed command (no redundant 'Preview:' label)
-            let preview_line = format!("  {}  ", sel_text);
+            // show the action template in the preview (no redundant 'Preview:' label)
+            let preview_line = match app.focused_column {
+                0 => app.project_actions[app.project_selected].template.clone(),
+                1 => app.server_actions[app.server_selected].template.clone(),
+                2 => app.tools_actions[app.tools_selected].template.clone(),
+                _ => String::new(),
+            };
 
             // Draw bordered preview and render a single-line paragraph inside
             let preview_area = bottom_chunks[0];
@@ -306,11 +331,11 @@ pub fn run_app(
             };
             let inner_para = Paragraph::new(vec![Spans::from(vec![
                 Span::raw("  "),
-                Span::raw(sel_text.clone()),
+                Span::raw(preview_line.clone()),
                 Span::raw("  "),
             ])])
-            .alignment(Alignment::Left)
-            .wrap(Wrap { trim: false });
+                .alignment(Alignment::Left)
+                .wrap(Wrap { trim: false });
             f.render_widget(inner_para, inner);
 
             // Single-line concise help bar
@@ -318,7 +343,7 @@ pub fn run_app(
                 "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close",
                 Style::default().fg(Color::Rgb(150, 150, 150)),
             ));
-            let help = Paragraph::new(help_line).alignment(Alignment::Left);
+            
 
             // If the help area is tall enough, render a bordered block and draw the
             // help text inside the block inner rect. Otherwise render the help line
