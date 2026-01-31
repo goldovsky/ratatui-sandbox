@@ -6,9 +6,9 @@ use ratatui::text::{Span, Spans};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
 use ratatui::Terminal;
 mod title;
-use title::title_spans;
 use std::io;
 use std::time::{Duration, Instant};
+use title::title_spans;
 
 use crate::runner::{dry_run_command, run_command};
 
@@ -117,12 +117,17 @@ pub fn run_app(
         terminal.draw(|f| {
             let size = f.size();
 
+            // Obtain the title lines (figlet or fallback) so we can size the top chunk
+            let title_lines = title_spans();
+            // reserve one extra row for the subtitle we append below
+            let title_height = (title_lines.len() as u16).saturating_add(1).max(3);
+
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(1)
                 .constraints(
                     [
-                        Constraint::Length(7),
+                        Constraint::Length(title_height),
                         Constraint::Min(10),
                         Constraint::Length(6),
                     ]
@@ -130,9 +135,19 @@ pub fn run_app(
                 )
                 .split(size);
 
-            // Title area: use figlet if available, otherwise fallback
-            let title_lines = title_spans();
-            let title = Paragraph::new(title_lines).alignment(Alignment::Center);
+            // If figlet produced lines, the last line is the subtitle only when figlet failed.
+            // To ensure the subtitle is always visible, render a separate subtitle row below
+            // the figlet output.
+            let mut title_body = title_lines.clone();
+            // ensure there's an explicit subtitle at the end
+            title_body.push(Spans::from(Span::styled(
+                "Handy scripts launcher for project, servers and tooling",
+                Style::default()
+                    .fg(Color::Rgb(255, 165, 0))
+                    .add_modifier(Modifier::BOLD),
+            )));
+
+            let title = Paragraph::new(title_body).alignment(Alignment::Center);
             f.render_widget(title, chunks[0]);
 
             // Middle columns
