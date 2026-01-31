@@ -1,0 +1,9 @@
+ok,
+now let's talk what will happen when we select an option (when the user press enter).
+the title, subtitle, preview section and helper section will never change. they will always be present.
+when an action is selected, the three columns "Projects", "Servers" and "Tools" will be replaced by a new borderless section.
+we will start with a title being the action selected.
+below it in italic a short description to explain what it does.
+if the action need no other parameters, the user should be able to press enter again and the app will close and the value will be already typed in the terminal, for dev purpose, let's add a dryrun option that will be displayed in the terminal, let's activate it by default and wrap the value with an echo and quotes.
+a message should be displayed at the end of the new descriptive section to tell the user what is next.
+if the value have any options that need to be selected, if it's from a list we need the user to select one, if it's the user that need to write the value we need to be able to do it
