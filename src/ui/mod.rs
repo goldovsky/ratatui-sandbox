@@ -129,7 +129,7 @@ pub fn run_app(
                     [
                         Constraint::Length(title_height),
                         Constraint::Min(10),
-                        Constraint::Length(7),
+                    Constraint::Length(6),
                     ]
                     .as_ref(),
                 )
