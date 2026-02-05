@@ -1,0 +1,140 @@
+# CALLBOT Configuration File
+# This file defines all columns, actions, and parameters for the launcher UI.
+
+[app]
+title = "CALLBOT"
+subtitle = "Handy scripts launcher for projects, servers and tools"
+
+# =============================================================================
+# PROJECTS COLUMN
+# =============================================================================
+[[columns]]
+id = "projects"
+title = "Projects"
+
+[[columns.actions]]
+label = "Create Merge Requests"
+template = "cmr"
+description = "Creates merge requests for the current branch"
+
+[[columns.actions]]
+label = "Format Merge Requests (for Teams)"
+template = "fmr"
+description = "Formats merge requests for Teams notifications"
+
+[[columns.actions]]
+label = "Deploy Snapshot (in QLF)"
+template = "deploySnapshot.sh"
+description = "Deploys a snapshot to the QLF environment"
+
+# =============================================================================
+# SERVERS COLUMN
+# =============================================================================
+[[columns]]
+id = "servers"
+title = "Servers"
+
+[[columns.actions]]
+label = "Get BDD Dumps"
+template = "getLastDump.sh -e {ENV} -p {PROJECT}"
+description = "Downloads the latest database dump"
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+description = "Target environment"
+options = [
+    { value = "dev", label = "Development" },
+    { value = "qlf", label = "Qualification" },
+    { value = "prod", label = "Production" }
+]
+
+[[columns.actions.parameters]]
+name = "PROJECT"
+placeholder = "{PROJECT}"
+param_type = "text"
+required = true
+description = "Project name"
+
+[[columns.actions]]
+label = "SSH to remote Servers"
+template = "callbotConnect.sh {ENV} {SERVER}"
+description = "Opens SSH connection to a remote server"
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+description = "Target environment"
+options = [
+    { value = "dev", label = "Development" },
+    { value = "qlf", label = "Qualification" },
+    { value = "prod", label = "Production" }
+]
+
+[[columns.actions.parameters]]
+name = "SERVER"
+placeholder = "{SERVER}"
+param_type = "text"
+required = true
+description = "Server hostname or IP address"
+
+# =============================================================================
+# TOOLS COLUMN
+# =============================================================================
+[[columns]]
+id = "tools"
+title = "Tools"
+
+[[columns.actions]]
+label = "Simulate Calls"
+template = "simulateCalls.sh {ENV} {BOT_ID} {PHONE_NUMBER} {TYPE} {OPTIONS}"
+description = "Simulates phone calls for testing"
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+description = "Target environment"
+options = [
+    { value = "dev", label = "Development" },
+    { value = "qlf", label = "Qualification" },
+    { value = "prod", label = "Production" }
+]
+
+[[columns.actions.parameters]]
+name = "BOT_ID"
+placeholder = "{BOT_ID}"
+param_type = "text"
+required = true
+description = "Bot identifier"
+
+[[columns.actions.parameters]]
+name = "PHONE_NUMBER"
+placeholder = "{PHONE_NUMBER}"
+param_type = "text"
+required = true
+description = "Phone number to simulate"
+
+[[columns.actions.parameters]]
+name = "TYPE"
+placeholder = "{TYPE}"
+param_type = "select"
+required = true
+description = "Call type"
+options = [
+    { value = "inbound", label = "Inbound" },
+    { value = "outbound", label = "Outbound" }
+]
+
+[[columns.actions.parameters]]
+name = "OPTIONS"
+placeholder = "{OPTIONS}"
+param_type = "text"
+required = false
+description = "Additional options (optional)"
+default = ""

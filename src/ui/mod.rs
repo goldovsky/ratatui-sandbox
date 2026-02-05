@@ -10,120 +10,74 @@ use std::io;
 use std::time::{Duration, Instant};
 use title::title_spans;
 
+use crate::config::{Action, Config};
 use crate::runner::{dry_run_command, run_command};
 
-pub struct App {
-    pub project_actions: Vec<Action>,
-    pub server_actions: Vec<Action>,
-    pub tools_actions: Vec<Action>,
-    pub project_selected: usize,
-    pub server_selected: usize,
-    pub tools_selected: usize,
-    pub focused_column: usize, // 0 project, 1 server, 2 tools
+/// Column state: tracks selection within a column
+pub struct ColumnState {
+    pub title: String,
+    pub actions: Vec<Action>,
+    pub selected: usize,
 }
 
-// Simple action: label shown in the list, template shown in the preview
-pub struct Action {
-    pub label: String,
-    pub template: String,
+pub struct App {
+    pub config: Config,
+    pub columns: Vec<ColumnState>,
+    pub focused_column: usize,
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
+        let columns: Vec<ColumnState> = config
+            .columns
+            .iter()
+            .map(|col| ColumnState {
+                title: col.title.clone(),
+                actions: col.actions.clone(),
+                selected: 0,
+            })
+            .collect();
+
         Self {
-            project_actions: vec![
-                Action {
-                    label: "Create Merge Requests".into(),
-                    template: "cmr".into(),
-                },
-                Action {
-                    label: "Format Merge Requests (for Teams)".into(),
-                    template: "fmr".into(),
-                },
-                Action {
-                    label: "Deploy Snapshot (in QLF)".into(),
-                    template: "deploySnapshot.sh".into(),
-                },
-            ],
-            server_actions: vec![
-                Action {
-                    label: "Get BDD Dumps".into(),
-                    template: "getLastDump.sh -e {ENV} -p {PROJECT}".into(),
-                },
-                Action {
-                    label: "SSH to remote Servers".into(),
-                    template: "callbotConnect.sh {ENV} {SERVER}".into(),
-                },
-            ],
-            tools_actions: vec![Action {
-                label: "Simulate Calls".into(),
-                template: "Simulate Calls {ENV} {BOT_ID} {PHONE_NUMBER} {TYPE} {OPTIONS}".into(),
-            }],
-            project_selected: 0,
-            server_selected: 0,
-            tools_selected: 0,
+            config,
+            columns,
             focused_column: 0,
         }
     }
 
     fn move_up(&mut self) {
-        match self.focused_column {
-            0 => {
-                if self.project_selected > 0 {
-                    self.project_selected -= 1;
-                }
+        if let Some(col) = self.columns.get_mut(self.focused_column) {
+            if col.selected > 0 {
+                col.selected -= 1;
             }
-            1 => {
-                if self.server_selected > 0 {
-                    self.server_selected -= 1;
-                }
-            }
-            2 => {
-                if self.tools_selected > 0 {
-                    self.tools_selected -= 1;
-                }
-            }
-            _ => {}
         }
     }
 
     fn move_down(&mut self) {
-        match self.focused_column {
-            0 => {
-                if self.project_selected + 1 < self.project_actions.len() {
-                    self.project_selected += 1;
-                }
+        if let Some(col) = self.columns.get_mut(self.focused_column) {
+            if col.selected + 1 < col.actions.len() {
+                col.selected += 1;
             }
-            1 => {
-                if self.server_selected + 1 < self.server_actions.len() {
-                    self.server_selected += 1;
-                }
-            }
-            2 => {
-                if self.tools_selected + 1 < self.tools_actions.len() {
-                    self.tools_selected += 1;
-                }
-            }
-            _ => {}
         }
     }
 
     fn focused_selection(&self) -> (String, usize) {
-        match self.focused_column {
-            0 => (
-                self.project_actions[self.project_selected].label.clone(),
-                self.project_selected,
-            ),
-            1 => (
-                self.server_actions[self.server_selected].label.clone(),
-                self.server_selected,
-            ),
-            2 => (
-                self.tools_actions[self.tools_selected].label.clone(),
-                self.tools_selected,
-            ),
-            _ => ("".into(), 0),
+        if let Some(col) = self.columns.get(self.focused_column) {
+            if let Some(action) = col.actions.get(col.selected) {
+                return (action.label.clone(), col.selected);
+            }
         }
+        ("".into(), 0)
+    }
+
+    fn focused_action(&self) -> Option<&Action> {
+        self.columns
+            .get(self.focused_column)
+            .and_then(|col| col.actions.get(col.selected))
+    }
+
+    fn column_count(&self) -> usize {
+        self.columns.len()
     }
 }
 
@@ -150,7 +104,7 @@ pub fn run_app(
                     [
                         Constraint::Length(title_height),
                         Constraint::Min(10),
-                    Constraint::Length(6),
+                        Constraint::Length(6),
                     ]
                     .as_ref(),
                 )
@@ -160,9 +114,9 @@ pub fn run_app(
             // figlet output, render the figlet lines then the subtitle then a blank line.
             let mut title_body: Vec<Spans> = Vec::new();
             title_body.extend(title_lines.clone());
-            // subtitle
+            // subtitle from config
             title_body.push(Spans::from(Span::styled(
-                "Handy scripts launcher for project, servers and tooling",
+                app.config.app.subtitle.clone(),
                 Style::default().fg(Color::Rgb(150, 150, 150)),
             )));
             // one empty row below subtitle
@@ -171,132 +125,56 @@ pub fn run_app(
             let title = Paragraph::new(title_body).alignment(Alignment::Center);
             f.render_widget(title, chunks[0]);
 
-            // Middle columns
+            // Middle columns - dynamic based on config
+            let num_columns = app.column_count();
+            let column_constraints: Vec<Constraint> = (0..num_columns)
+                .map(|_| Constraint::Ratio(1, num_columns as u32))
+                .collect();
+
             let middle_chunks = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints(
-                    [
-                        Constraint::Percentage(33),
-                        Constraint::Percentage(34),
-                        Constraint::Percentage(33),
-                    ]
-                    .as_ref(),
-                )
+                .constraints(column_constraints)
                 .split(chunks[1]);
 
-            // Project column
-            let project_items: Vec<ListItem> = app
-                .project_actions
-                .iter()
-                .enumerate()
-                .map(|(i, a)| {
-                    // add left/right padding inside the list so items don't touch the border
-                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.label.clone())))];
-                    ListItem::new(content).style(
-                        if app.focused_column == 0 && app.project_selected == i {
-                            Style::default().fg(Color::Yellow)
-                        } else {
-                            Style::default()
-                        },
-                    )
-                })
-                .collect();
+            // Render each column dynamically
+            for (col_idx, col_state) in app.columns.iter().enumerate() {
+                let items: Vec<ListItem> = col_state
+                    .actions
+                    .iter()
+                    .enumerate()
+                    .map(|(i, action)| {
+                        let content = vec![Spans::from(Span::raw(format!("  {}  ", action.label)))];
+                        ListItem::new(content).style(
+                            if app.focused_column == col_idx && col_state.selected == i {
+                                Style::default().fg(Color::Yellow)
+                            } else {
+                                Style::default()
+                            },
+                        )
+                    })
+                    .collect();
 
-            // Use short literal title and let Block center it via title_alignment so
-            // the top border's horizontal lines remain visible.
-            let project_title = {
-                let inner = middle_chunks[0].width as usize;
-                let core = "Projects";
-                if inner > core.len() + 2 {
-                    format!(" {} ", core)
-                } else {
-                    core.to_string()
-                }
-            };
-            let project_list = List::new(project_items).block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(Span::styled(
-                        project_title,
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ))
-                    .title_alignment(Alignment::Center),
-            );
-            f.render_widget(project_list, middle_chunks[0]);
+                let col_title = {
+                    let inner = middle_chunks[col_idx].width as usize;
+                    let core = &col_state.title;
+                    if inner > core.len() + 2 {
+                        format!(" {} ", core)
+                    } else {
+                        core.clone()
+                    }
+                };
 
-            // Server column
-            let server_items: Vec<ListItem> = app
-                .server_actions
-                .iter()
-                .enumerate()
-                .map(|(i, a)| {
-                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.label.clone())))];
-                    ListItem::new(content).style(
-                        if app.focused_column == 1 && app.server_selected == i {
-                            Style::default().fg(Color::Yellow)
-                        } else {
-                            Style::default()
-                        },
-                    )
-                })
-                .collect();
-
-            let server_title = {
-                let inner = middle_chunks[1].width as usize;
-                let core = "Servers";
-                if inner > core.len() + 2 {
-                    format!(" {} ", core)
-                } else {
-                    core.to_string()
-                }
-            };
-            let server_list = List::new(server_items).block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(Span::styled(
-                        server_title,
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ))
-                    .title_alignment(Alignment::Center),
-            );
-            f.render_widget(server_list, middle_chunks[1]);
-
-            // Tools column
-            let tools_items: Vec<ListItem> = app
-                .tools_actions
-                .iter()
-                .enumerate()
-                .map(|(i, a)| {
-                    let content = vec![Spans::from(Span::raw(format!("  {}  ", a.label.clone())))];
-                    ListItem::new(content).style(
-                        if app.focused_column == 2 && app.tools_selected == i {
-                            Style::default().fg(Color::Yellow)
-                        } else {
-                            Style::default()
-                        },
-                    )
-                })
-                .collect();
-
-            let tools_title = {
-                let inner = middle_chunks[2].width as usize;
-                let core = "Tools";
-                if inner > core.len() + 2 {
-                    format!(" {} ", core)
-                } else {
-                    core.to_string()
-                }
-            };
-            let tools_list = List::new(tools_items).block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(Span::styled(
-                        tools_title,
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ))
-                    .title_alignment(Alignment::Center),
-            );
-            f.render_widget(tools_list, middle_chunks[2]);
+                let list = List::new(items).block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title(Span::styled(
+                            col_title,
+                            Style::default().add_modifier(Modifier::BOLD),
+                        ))
+                        .title_alignment(Alignment::Center),
+                );
+                f.render_widget(list, middle_chunks[col_idx]);
+            }
 
             // Bottom preview and help
             // Reserve 3 rows for the preview (border + 1 inner line + border)
@@ -306,19 +184,20 @@ pub fn run_app(
                 .constraints([Constraint::Length(3), Constraint::Length(3)].as_ref())
                 .split(chunks[2]);
 
-            // show the action template in the preview (no redundant 'Preview:' label)
-            let preview_line = match app.focused_column {
-                0 => app.project_actions[app.project_selected].template.clone(),
-                1 => app.server_actions[app.server_selected].template.clone(),
-                2 => app.tools_actions[app.tools_selected].template.clone(),
-                _ => String::new(),
-            };
+            // show the action template in the preview
+            let preview_line = app
+                .focused_action()
+                .map(|a| a.template.clone())
+                .unwrap_or_default();
 
             // Draw bordered preview and render a single-line paragraph inside
             let preview_area = bottom_chunks[0];
             let block = Block::default()
                 .borders(Borders::ALL)
-                .title(Span::styled(" Preview ", Style::default().add_modifier(Modifier::BOLD)))
+                .title(Span::styled(
+                    " Preview ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ))
                 .title_alignment(Alignment::Left);
             f.render_widget(block, preview_area);
 
@@ -334,25 +213,23 @@ pub fn run_app(
                 Span::raw(preview_line.clone()),
                 Span::raw("  "),
             ])])
-                .alignment(Alignment::Left)
-                .wrap(Wrap { trim: false });
+            .alignment(Alignment::Left)
+            .wrap(Wrap { trim: false });
             f.render_widget(inner_para, inner);
 
-            // Single-line concise help bar
-            let help_line = Spans::from(Span::styled(
-                "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close",
-                Style::default().fg(Color::Rgb(150, 150, 150)),
-            ));
-            
+            // Help bar content
+            let help_text =
+                "Tab: switch column   Up/Down: navigate   Enter: details (e:Echo r:Run)   q: quit";
 
             // If the help area is tall enough, render a bordered block and draw the
             // help text inside the block inner rect. Otherwise render the help line
             // directly (no border) so it remains visible on small terminals.
             let help_area = bottom_chunks[1];
             if help_area.height >= 3 {
-                let block = Block::default()
-                    .borders(Borders::ALL)
-                    .title(Span::styled(" Help ", Style::default().add_modifier(Modifier::BOLD)));
+                let block = Block::default().borders(Borders::ALL).title(Span::styled(
+                    " Help ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ));
                 f.render_widget(block, help_area);
 
                 let inner = Rect {
@@ -361,7 +238,6 @@ pub fn run_app(
                     width: help_area.width.saturating_sub(2),
                     height: help_area.height.saturating_sub(2),
                 };
-                let help_text = "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close";
                 let inner_para = Paragraph::new(vec![Spans::from(vec![
                     Span::raw("  "),
                     Span::styled(help_text, Style::default().fg(Color::Rgb(150, 150, 150))),
@@ -374,10 +250,7 @@ pub fn run_app(
                 // cramped: render help text plainly so it's visible
                 let compact = Paragraph::new(vec![Spans::from(vec![
                     Span::raw("  "),
-                    Span::styled(
-                        "↹  switch column   ↑ /↓  navigate   Enter: details (e:Echo r:Run)   q: quit   Esc: close",
-                        Style::default().fg(Color::Rgb(150, 150, 150)),
-                    ),
+                    Span::styled(help_text, Style::default().fg(Color::Rgb(150, 150, 150))),
                     Span::raw("  "),
                 ])])
                 .alignment(Alignment::Left);
@@ -393,13 +266,21 @@ pub fn run_app(
             if let Event::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Tab => app.focused_column = (app.focused_column + 1) % 3,
+                    KeyCode::Tab => {
+                        let num_cols = app.column_count();
+                        if num_cols > 0 {
+                            app.focused_column = (app.focused_column + 1) % num_cols;
+                        }
+                    }
                     KeyCode::Up => app.move_up(),
                     KeyCode::Down => app.move_down(),
                     KeyCode::Enter => {
                         // show modal preview
                         let (sel_text, _sel_index) = app.focused_selection();
-                        let command = sel_text; // placeholder: in future build full command string
+                        let command = app
+                            .focused_action()
+                            .map(|a| a.template.clone())
+                            .unwrap_or(sel_text);
 
                         // show preview modal
                         show_preview(terminal, &app)?;
@@ -445,7 +326,7 @@ fn show_preview(
     loop {
         terminal.draw(|f| {
             let size = f.size();
-            let area = centered_rect(60, 40, size);
+            let area = centered_rect(70, 60, size);
             let block = Block::default().borders(Borders::ALL).title(Span::styled(
                 " Details ",
                 Style::default().add_modifier(Modifier::BOLD),
@@ -455,16 +336,78 @@ fn show_preview(
             let inner = Rect {
                 x: area.x + 1,
                 y: area.y + 1,
-                width: area.width - 2,
-                height: area.height - 2,
+                width: area.width.saturating_sub(2),
+                height: area.height.saturating_sub(2),
             };
-            let (sel_text, _sel_index) = app.focused_selection();
-            let text = Paragraph::new(Spans::from(vec![Span::raw(format!(
-                "Detailed preview for: {}",
-                sel_text
-            ))]))
-            .alignment(Alignment::Left)
-            .wrap(Wrap { trim: true });
+
+            // Build detailed content from the focused action
+            let mut lines: Vec<Spans> = Vec::new();
+
+            if let Some(action) = app.focused_action() {
+                // Action label
+                lines.push(Spans::from(vec![
+                    Span::styled("Action: ", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::raw(&action.label),
+                ]));
+                lines.push(Spans::from(Span::raw("")));
+
+                // Description if present
+                if let Some(ref desc) = action.description {
+                    lines.push(Spans::from(vec![
+                        Span::styled(
+                            "Description: ",
+                            Style::default().add_modifier(Modifier::BOLD),
+                        ),
+                        Span::raw(desc),
+                    ]));
+                    lines.push(Spans::from(Span::raw("")));
+                }
+
+                // Command template
+                lines.push(Spans::from(vec![
+                    Span::styled("Command: ", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(&action.template, Style::default().fg(Color::Cyan)),
+                ]));
+                lines.push(Spans::from(Span::raw("")));
+
+                // Parameters
+                if !action.parameters.is_empty() {
+                    lines.push(Spans::from(Span::styled(
+                        "Parameters:",
+                        Style::default().add_modifier(Modifier::BOLD),
+                    )));
+
+                    for param in &action.parameters {
+                        let required_marker = if param.required { " *" } else { "" };
+                        let param_type = format!("{:?}", param.param_type).to_lowercase();
+
+                        lines.push(Spans::from(vec![
+                            Span::raw("  "),
+                            Span::styled(&param.name, Style::default().fg(Color::Yellow)),
+                            Span::raw(format!(" ({}){}", param_type, required_marker)),
+                        ]));
+
+                        if let Some(ref desc) = param.description {
+                            lines.push(Spans::from(vec![
+                                Span::raw("    "),
+                                Span::styled(desc, Style::default().fg(Color::Rgb(150, 150, 150))),
+                            ]));
+                        }
+                    }
+                }
+            } else {
+                lines.push(Spans::from(Span::raw("No action selected")));
+            }
+
+            lines.push(Spans::from(Span::raw("")));
+            lines.push(Spans::from(Span::styled(
+                "Press Enter or Esc to close",
+                Style::default().fg(Color::Rgb(100, 100, 100)),
+            )));
+
+            let text = Paragraph::new(lines)
+                .alignment(Alignment::Left)
+                .wrap(Wrap { trim: true });
             f.render_widget(text, inner);
         })?;
 
