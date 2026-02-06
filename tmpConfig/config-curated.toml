@@ -1,0 +1,135 @@
+# CALLBOT Configuration File (curated)
+# A small, curated set of the most commonly used scripts for quick access.
+
+[app]
+title = "CALLBOT - Curated"
+subtitle = "Carefully selected common operations"
+
+[[columns]]
+id = "projects"
+title = "Projects"
+
+[[columns.actions]]
+label = "Create Release MR"
+template = "callbot/src/cb-docker/bin/local/createReleaseMR.sh"
+description = "Create a release Merge Request"
+
+[[columns.actions]]
+label = "Merge Release MR"
+template = "callbot/src/cb-docker/bin/local/mergeReleaseMR.sh"
+description = "Merge a release MR locally"
+
+[[columns.actions]]
+label = "Publish to Artifactory"
+template = "callbot/src/cb-docker/bin/mvp/deployOnArtifactory.sh"
+description = "Publish artifacts to Artifactory"
+
+[[columns]]
+id = "servers"
+title = "Servers"
+
+[[columns.actions]]
+label = "Get BDD Dumps"
+template = "callbot/src/cb-docker/bin/local/getLastDump.sh -e {ENV} -p {PROJECT}"
+description = "Download latest database dump"
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+options = [
+    { value = "qlf", label = "Qualification" },
+    { value = "pprod", label = "Pre-Prod" },
+    { value = "prod", label = "Production" }
+]
+
+[[columns.actions.parameters]]
+name = "PROJECT"
+placeholder = "{PROJECT}"
+param_type = "text"
+required = false
+
+[[columns.actions]]
+label = "SSH to server (quick)"
+template = "callbot/src/cb-docker/bin/local/callbotConnect.sh {ENV} {SERVER} ssh"
+description = "SSH to a server using callbotConnect helper"
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+options = [
+    { value = "qlf", label = "Qualification" },
+    { value = "pprod", label = "Pre-Prod" },
+    { value = "prod", label = "Production" }
+]
+
+[[columns.actions.parameters]]
+name = "SERVER"
+placeholder = "{SERVER}"
+param_type = "text"
+required = true
+
+[[columns]]
+id = "tools"
+title = "Tools"
+
+[[columns.actions]]
+label = "Simulate Call"
+template = "callbot/src/cb-docker/bin/local/simulCall.sh {ENV} {CALLBOT_ID} {CALLER}"
+description = "Interactive simulation of a call (default mode)"
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+options = [
+    { value = "local", label = "Local" },
+    { value = "qlf", label = "Qualification" },
+    { value = "pprod", label = "Pre-Prod" }
+]
+
+[[columns.actions.parameters]]
+name = "CALLBOT_ID"
+placeholder = "{CALLBOT_ID}"
+param_type = "text"
+required = true
+
+[[columns.actions.parameters]]
+name = "CALLER"
+placeholder = "{CALLER}"
+param_type = "text"
+required = true
+
+[[columns.actions]]
+label = "Mock Audio"
+template = "callbot/src/cb-docker/bin/local/mockAudio.sh"
+
+[[columns.actions]]
+label = "Get MVP Call Logs"
+template = "callbot/src/cb-docker/misc/getMVPCallLogs.sh"
+
+[[columns.actions]]
+label = "Get Deployed Versions"
+template = "callbot/src/cb-docker/bin/local/getDeployedVersions.sh {ENV} {SERVICE}"
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+options = [
+    { value = "qlf", label = "Qualification" },
+    { value = "pprod", label = "Pre-Prod" }
+]
+
+[[columns.actions.parameters]]
+name = "SERVICE"
+placeholder = "{SERVICE}"
+param_type = "text"
+required = false
+
+# End of curated file
