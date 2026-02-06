@@ -6,13 +6,13 @@ use std::process::Command;
 // a built-in ASCII art. Returns lines already wrapped as `Spans` so the caller can
 // render them directly in a Paragraph. The function does NOT include the subtitle
 // line; the UI appends that explicitly to guarantee it's visible.
-pub fn title_spans() -> Vec<Spans<'static>> {
+pub fn title_spans(title: &str) -> Vec<Spans<'static>> {
     // If CALLBOT_FIGLET_FONT is set, try to use that font first.
     if let Ok(font) = std::env::var("CALLBOT_FIGLET_FONT") {
         if let Ok(output) = Command::new("figlet")
             .arg("-f")
             .arg(&font)
-            .arg("CALLBOT")
+            .arg(title)
             .output()
         {
             if output.status.success() {
@@ -45,7 +45,7 @@ pub fn title_spans() -> Vec<Spans<'static>> {
         if let Ok(output) = Command::new("figlet")
             .arg("-f")
             .arg(bundled_font)
-            .arg("CALLBOT")
+            .arg(title)
             .output()
         {
             if output.status.success() {
@@ -72,7 +72,7 @@ pub fn title_spans() -> Vec<Spans<'static>> {
     }
 
     // Try figlet without font (system default)
-    if let Ok(output) = Command::new("figlet").arg("CALLBOT").output() {
+    if let Ok(output) = Command::new("figlet").arg(title).output() {
         if output.status.success() {
             if let Ok(s) = String::from_utf8(output.stdout) {
                 let mut lines: Vec<String> = s.lines().map(|l| l.to_string()).collect();
@@ -97,11 +97,14 @@ pub fn title_spans() -> Vec<Spans<'static>> {
 
     // Fallback static ASCII
     let ascii = [
-        r"  ____    _    _ _     ____   ____  ",
-        r" / ___|  / \\  | | |   | __ ) | __ ) ",
-        r"| |     / _ \\ | | |   |  _ \\ |  _ ",
-        r"| |___ / ___ \\| | |___| |_) || |_) |",
-        r" \\____/_/   \\_\\_|_____|____/ |____/",
+        r" $$$$$$\   $$$$$$\  $$\       $$\       $$$$$$$\   $$$$$$\ $$$$$$$$\ ",
+        r"$$  __$$\ $$  __$$\ $$ |      $$ |      $$  __$$\ $$  __$$\\__$$  __|",
+        r"$$ /  \__|$$ /  $$ |$$ |      $$ |      $$ |  $$ |$$ /  $$ |  $$ |   ",
+        r"$$ |      $$$$$$$$ |$$ |      $$ |      $$$$$$$\ |$$ |  $$ |  $$ |   ",
+        r"$$ |      $$  __$$ |$$ |      $$ |      $$  __$$\ $$ |  $$ |  $$ |   ",
+        r"$$ |  $$\ $$ |  $$ |$$ |      $$ |      $$ |  $$ |$$ |  $$ |  $$ |   ",
+        r"\$$$$$$  |$$ |  $$ |$$$$$$$$\ $$$$$$$$\ $$$$$$$  | $$$$$$  |  $$ |   ",
+        r" \______/ \__|  \__|\________|\________|\_______/  \______/   \__|   ",
     ];
 
     ascii

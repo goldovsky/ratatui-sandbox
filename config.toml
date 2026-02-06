@@ -2,10 +2,9 @@
 # This file defines all columns, actions, and parameters for the launcher UI.
 
 [app]
-# title = "CALLBOT"
-# subtitle = "Handy scripts launcher for projects, servers and tools"
-title = "CALLBOT | SCRIPTS"
+title = "CALLBOT"
 subtitle = "One TUI to rule them all, One TUI to bring them all, and in the terminal bind them."
+# subtitle = "Handy scripts launcher for projects, servers and tools"
 
 # =============================================================================
 # PROJECTS COLUMN

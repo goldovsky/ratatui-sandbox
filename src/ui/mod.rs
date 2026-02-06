@@ -93,7 +93,7 @@ pub fn run_app(
             let size = f.size();
 
             // Obtain the title lines (figlet or fallback) so we can size the top chunk
-            let title_lines = title_spans();
+            let title_lines = title_spans(&app.config.app.title);
             // reserve one extra row for the subtitle we append below
             let title_height = (title_lines.len() as u16).saturating_add(1).max(3);
 
