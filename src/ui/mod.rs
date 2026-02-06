@@ -3,7 +3,7 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Span, Spans};
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
 use ratatui::Terminal;
 mod title;
 use std::io;
@@ -17,7 +17,7 @@ use crate::runner::{dry_run_command, run_command};
 pub struct ColumnState {
     pub title: String,
     pub actions: Vec<Action>,
-    pub selected: usize,
+    pub list_state: ListState,
 }
 
 pub struct App {
@@ -31,10 +31,18 @@ impl App {
         let columns: Vec<ColumnState> = config
             .columns
             .iter()
-            .map(|col| ColumnState {
-                title: col.title.clone(),
-                actions: col.actions.clone(),
-                selected: 0,
+            .map(|col| {
+                let mut ls = ListState::default();
+                if col.actions.is_empty() {
+                    ls.select(None);
+                } else {
+                    ls.select(Some(0));
+                }
+                ColumnState {
+                    title: col.title.clone(),
+                    actions: col.actions.clone(),
+                    list_state: ls,
+                }
             })
             .collect();
 
@@ -47,24 +55,32 @@ impl App {
 
     fn move_up(&mut self) {
         if let Some(col) = self.columns.get_mut(self.focused_column) {
-            if col.selected > 0 {
-                col.selected -= 1;
+            if let Some(curr) = col.list_state.selected() {
+                if curr > 0 {
+                    let new = curr - 1;
+                    col.list_state.select(Some(new));
+                }
             }
         }
     }
 
     fn move_down(&mut self) {
         if let Some(col) = self.columns.get_mut(self.focused_column) {
-            if col.selected + 1 < col.actions.len() {
-                col.selected += 1;
+            if let Some(curr) = col.list_state.selected() {
+                if curr + 1 < col.actions.len() {
+                    let new = curr + 1;
+                    col.list_state.select(Some(new));
+                }
             }
         }
     }
 
     fn focused_selection(&self) -> (String, usize) {
         if let Some(col) = self.columns.get(self.focused_column) {
-            if let Some(action) = col.actions.get(col.selected) {
-                return (action.label.clone(), col.selected);
+            if let Some(idx) = col.list_state.selected() {
+                if let Some(action) = col.actions.get(idx) {
+                    return (action.label.clone(), idx);
+                }
             }
         }
         ("".into(), 0)
@@ -73,7 +89,7 @@ impl App {
     fn focused_action(&self) -> Option<&Action> {
         self.columns
             .get(self.focused_column)
-            .and_then(|col| col.actions.get(col.selected))
+            .and_then(|col| col.list_state.selected().and_then(|i| col.actions.get(i)))
     }
 
     fn column_count(&self) -> usize {
@@ -137,26 +153,25 @@ pub fn run_app(
                 .split(chunks[1]);
 
             // Render each column dynamically
-            for (col_idx, col_state) in app.columns.iter().enumerate() {
-                let items: Vec<ListItem> = col_state
-                    .actions
+            for col_idx in 0..app.columns.len() {
+                // snapshot small bits so we don't keep immutable borrows while taking a
+                // mutable borrow for the ListState below
+                let actions = app.columns[col_idx].actions.clone();
+                let title_text = app.columns[col_idx].title.clone();
+                let focused = app.focused_column == col_idx;
+
+                let items: Vec<ListItem> = actions
                     .iter()
                     .enumerate()
-                    .map(|(i, action)| {
+                    .map(|(_i, action)| {
                         let content = vec![Spans::from(Span::raw(format!("  {}  ", action.label)))];
-                        ListItem::new(content).style(
-                            if app.focused_column == col_idx && col_state.selected == i {
-                                Style::default().fg(Color::Yellow)
-                            } else {
-                                Style::default()
-                            },
-                        )
+                        ListItem::new(content)
                     })
                     .collect();
 
                 let col_title = {
                     let inner = middle_chunks[col_idx].width as usize;
-                    let core = &col_state.title;
+                    let core = &title_text;
                     if inner > core.len() + 2 {
                         format!(" {} ", core)
                     } else {
@@ -164,16 +179,37 @@ pub fn run_app(
                     }
                 };
 
-                let list = List::new(items).block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(Span::styled(
-                            col_title,
-                            Style::default().add_modifier(Modifier::BOLD),
-                        ))
-                        .title_alignment(Alignment::Center),
+                let mut list = List::new(items)
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .title(Span::styled(
+                                col_title,
+                                Style::default().add_modifier(Modifier::BOLD),
+                            ))
+                            .title_alignment(Alignment::Center),
+                    )
+                    // highlight the selected item; visually stronger when focused
+                    .highlight_style(if focused {
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::Rgb(150, 150, 150))
+                    });
+
+                if focused {
+                    list = list.highlight_symbol("► ");
+                } else {
+                    list = list.highlight_symbol("  ");
+                }
+
+                // render statefully so the List will scroll to keep the selected item visible
+                f.render_stateful_widget(
+                    list,
+                    middle_chunks[col_idx],
+                    &mut app.columns[col_idx].list_state,
                 );
-                f.render_widget(list, middle_chunks[col_idx]);
             }
 
             // Bottom preview and help
@@ -274,6 +310,67 @@ pub fn run_app(
                     }
                     KeyCode::Up => app.move_up(),
                     KeyCode::Down => app.move_down(),
+                    KeyCode::PageUp => {
+                        // move up by one page in the focused column
+                        let size = terminal.size()?;
+                        let title_lines = title_spans(&app.config.app.title);
+                        let title_height = (title_lines.len() as u16).saturating_add(1).max(3);
+                        // account for outer margin (1 top + 1 bottom)
+                        let middle_height = size
+                            .height
+                            .saturating_sub(2)
+                            .saturating_sub(title_height)
+                            .saturating_sub(6);
+                        let page = middle_height.saturating_sub(2).max(1) as usize; // inner height minus block borders
+
+                        if let Some(col) = app.columns.get_mut(app.focused_column) {
+                            if !col.actions.is_empty() {
+                                if let Some(curr) = col.list_state.selected() {
+                                    let new = curr.saturating_sub(page);
+                                    col.list_state.select(Some(new));
+                                }
+                            }
+                        }
+                    }
+                    KeyCode::PageDown => {
+                        // move down by one page in the focused column
+                        let size = terminal.size()?;
+                        let title_lines = title_spans(&app.config.app.title);
+                        let title_height = (title_lines.len() as u16).saturating_add(1).max(3);
+                        let middle_height = size
+                            .height
+                            .saturating_sub(2)
+                            .saturating_sub(title_height)
+                            .saturating_sub(6);
+                        let page = middle_height.saturating_sub(2).max(1) as usize;
+
+                        if let Some(col) = app.columns.get_mut(app.focused_column) {
+                            if !col.actions.is_empty() {
+                                if let Some(curr) = col.list_state.selected() {
+                                    let new =
+                                        (curr + page).min(col.actions.len().saturating_sub(1));
+                                    col.list_state.select(Some(new));
+                                }
+                            }
+                        }
+                    }
+                    KeyCode::Home => {
+                        // jump to top
+                        if let Some(col) = app.columns.get_mut(app.focused_column) {
+                            if !col.actions.is_empty() {
+                                col.list_state.select(Some(0));
+                            }
+                        }
+                    }
+                    KeyCode::End => {
+                        // jump to bottom
+                        if let Some(col) = app.columns.get_mut(app.focused_column) {
+                            if !col.actions.is_empty() {
+                                col.list_state
+                                    .select(Some(col.actions.len().saturating_sub(1)));
+                            }
+                        }
+                    }
                     KeyCode::Enter => {
                         // show modal preview
                         let (sel_text, _sel_index) = app.focused_selection();
