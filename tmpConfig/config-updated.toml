@@ -3,7 +3,7 @@
 
 [app]
 title = "CALLBOT"
-subtitle = "Handy scripts launcher for projects, servers and tools"
+subtitle = "One TUI to rule them all, One TUI to bring them all, and in the terminal bind them. (updated)"
 
 # =============================================================================
 # PROJECTS COLUMN
@@ -24,37 +24,37 @@ description = "Formats merge requests for Teams notifications"
 
 [[columns.actions]]
 label = "Deploy Snapshot (local)"
-template = "callbot/src/cb-docker/bin/local/deploySnapshot.sh"
+template = "deploySnapshot.sh"
 description = "Deploy a snapshot (runs deploySnapshot.sh in cb-docker)"
 
 [[columns.actions]]
 label = "Deploy Package"
-template = "callbot/src/cb-docker/bin/local/deployPackage.sh"
+template = "deployPackage.sh"
 description = "Deploy application package to environment"
 
 [[columns.actions]]
 label = "Publish to Artifactory"
-template = "callbot/src/cb-docker/bin/mvp/deployOnArtifactory.sh"
+template = "deployOnArtifactory.sh"
 description = "Build/publish artifacts to Artifactory (MVP flow)"
 
 [[columns.actions]]
 label = "Create Release MR"
-template = "callbot/src/cb-docker/bin/local/createReleaseMR.sh"
+template = "createReleaseMR.sh"
 description = "Create a release Merge Request"
 
 [[columns.actions]]
 label = "Merge Release MR (local)"
-template = "callbot/src/cb-docker/bin/local/mergeReleaseMR.sh"
+template = "mergeReleaseMR.sh"
 description = "Merge release MR locally"
 
 [[columns.actions]]
 label = "Prepare Release Package"
-template = "callbot/src/cb-docker/bin/local/releasePackage.sh"
+template = "releasePackage.sh"
 description = "Create a release package (local)"
 
 [[columns.actions]]
 label = "Get Callbot Package"
-template = "callbot/src/cb-docker/bin/platform/getCallbotPackage.sh"
+template = "getCallbotPackage.sh"
 description = "Download or prepare callbot package"
 
 # =============================================================================
@@ -66,7 +66,7 @@ title = "Servers"
 
 [[columns.actions]]
 label = "Get BDD Dumps"
-template = "callbot/src/cb-docker/bin/local/getLastDump.sh -e {ENV} -p {PROJECT}"
+template = "getLastDump.sh -e {ENV} -p {PROJECT}"
 description = "Downloads the latest database dump"
 
 [[columns.actions.parameters]]
@@ -90,7 +90,7 @@ description = "Project name (defaults to cb-orchestrator)"
 
 [[columns.actions]]
 label = "SSH / File Ops via callbotConnect"
-template = "callbot/src/cb-docker/bin/local/callbotConnect.sh {ENV} {SERVER} {COMMAND} {FROM} {TO}"
+template = "callbotConnect.sh {ENV} {SERVER} {COMMAND} {FROM} {TO}"
 description = "Run SSH or scp to remote server (use COMMAND: ssh|get|put|ssh-copy-id|remove-host-signature)"
 
 [[columns.actions.parameters]]
@@ -142,7 +142,7 @@ description = "Destination path (for get/put)"
 
 [[columns.actions]]
 label = "Connect to VM (helper)"
-template = "callbot/src/cb-docker/bin/local/connectToVM.sh {ENV} {VM}"
+template = "connectToVM.sh {ENV} {VM}"
 description = "Helper to connect to specific VM"
 
 [[columns.actions.parameters]]
@@ -173,7 +173,7 @@ title = "Tools"
 
 [[columns.actions]]
 label = "Simulate Call (interactive)"
-template = "callbot/src/cb-docker/bin/local/simulCall.sh {ENV} {CALLBOT_ID} {CALLER} {MODE} {HANGUP_MODE}"
+template = "simulCall.sh {ENV} {CALLBOT_ID} {CALLER} {MODE} {HANGUP_MODE}"
 description = "Simulates a phone call to an orchestrator (interactive). See script usage for MODE and HANGUP options."
 
 [[columns.actions.parameters]]
@@ -234,7 +234,7 @@ options = [
 
 [[columns.actions]]
 label = "Mock Audio (playback)"
-template = "callbot/src/cb-docker/bin/local/mockAudio.sh {AUDIO_FILE}"
+template = "mockAudio.sh {AUDIO_FILE}"
 description = "Play or choose a mock audio file used for RECORD tests"
 
 [[columns.actions.parameters]]
@@ -246,7 +246,7 @@ description = "Audio filename (defaults available in misc/)"
 
 [[columns.actions]]
 label = "Get MVP Call Logs"
-template = "callbot/src/cb-docker/misc/getMVPCallLogs.sh {FROM} {TO}"
+template = "getMVPCallLogs.sh {FROM} {TO}"
 description = "Collect MVP call logs between two dates or patterns"
 
 [[columns.actions.parameters]]
@@ -265,7 +265,7 @@ description = "To date / pattern"
 
 [[columns.actions]]
 label = "Get Deployed Versions"
-template = "callbot/src/cb-docker/bin/local/getDeployedVersions.sh {ENV} {SERVICE}"
+template = "getDeployedVersions.sh {ENV} {SERVICE}"
 description = "Fetch deployed versions for a service in an environment"
 
 [[columns.actions.parameters]]
@@ -289,7 +289,7 @@ description = "Service name (optional)"
 
 [[columns.actions]]
 label = "Get Channel Id"
-template = "callbot/src/cb-docker/misc/getChannelId.sh {PARAMS}"
+template = "getChannelId.sh {PARAMS}"
 description = "Utility to retrieve channel id (script in misc/)"
 
 [[columns.actions.parameters]]

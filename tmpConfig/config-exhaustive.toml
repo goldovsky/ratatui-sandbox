@@ -3,7 +3,7 @@
 
 [app]
 title = "CALLBOT - Exhaustive"
-subtitle = "All scripts from callbot/src/cb-docker"
+subtitle = "One TUI to rule them all, One TUI to bring them all, and in the terminal bind them. (Exhaustive)"
 
 # Note: this file was auto-generated to include a broad set of helper scripts found under callbot/src/cb-docker.
 
@@ -13,35 +13,35 @@ title = "Projects & Platform"
 
 [[columns.actions]]
 label = "getCallbotPackage"
-template = "callbot/src/cb-docker/bin/platform/getCallbotPackage.sh"
+template = "getCallbotPackage.sh"
 
 [[columns.actions]]
 label = "synth (platform)"
-template = "callbot/src/cb-docker/bin/platform/synth.sh"
+template = "synth.sh"
 
 [[columns.actions]]
 label = "platform maj"
-template = "callbot/src/cb-docker/bin/platform/maj.sh"
+template = "maj.sh"
 
 [[columns.actions]]
 label = "cleanUpDeployment"
-template = "callbot/src/cb-docker/bin/platform/cleanUpDeployment.sh"
+template = "cleanUpDeployment.sh"
 
 [[columns.actions]]
 label = "ci run container"
-template = "callbot/src/cb-docker/ci-cd/runCIContainer.sh"
+template = "runCIContainer.sh"
 
 [[columns.actions]]
 label = "buildAndPublishImage (dev)"
-template = "callbot/src/cb-docker/dev/buildAndPublishImage.sh"
+template = "buildAndPublishImage.sh"
 
 [[columns.actions]]
 label = "runDevContainer"
-template = "callbot/src/cb-docker/dev/runDevContainer.sh"
+template = "runDevContainer.sh"
 
 [[columns.actions]]
 label = "createMergeRequest (dev script)"
-template = "callbot/src/cb-docker/dev/docker_rhel/scripts/createMergeRequest.sh"
+template = "createMergeRequest.sh"
 
 [[columns]]
 id = "exhaustive_local"
@@ -49,91 +49,91 @@ title = "Local Helpers"
 
 [[columns.actions]]
 label = "createReleaseMR"
-template = "callbot/src/cb-docker/bin/local/createReleaseMR.sh"
+template = "createReleaseMR.sh"
 
 [[columns.actions]]
 label = "mergeReleaseMR"
-template = "callbot/src/cb-docker/bin/local/mergeReleaseMR.sh"
+template = "mergeReleaseMR.sh"
 
 [[columns.actions]]
 label = "releasePackage"
-template = "callbot/src/cb-docker/bin/local/releasePackage.sh"
+template = "releasePackage.sh"
 
 [[columns.actions]]
 label = "getCommitsBetweenEnvs"
-template = "callbot/src/cb-docker/bin/local/getCommitsBetweenEnvs.sh"
+template = "getCommitsBetweenEnvs.sh"
 
 [[columns.actions]]
 label = "checkServicesStatus"
-template = "callbot/src/cb-docker/bin/local/checkServicesStatus.sh"
+template = "checkServicesStatus.sh"
 
 [[columns.actions]]
 label = "deploySnapshot"
-template = "callbot/src/cb-docker/bin/local/deploySnapshot.sh"
+template = "deploySnapshot.sh"
 
 [[columns.actions]]
 label = "getDeployedVersions"
-template = "callbot/src/cb-docker/bin/local/getDeployedVersions.sh {ENV} {SERVICE}"
+template = "getDeployedVersions.sh {ENV} {SERVICE}"
 
 [[columns.actions]]
 label = "callbotConnect"
-template = "callbot/src/cb-docker/bin/local/callbotConnect.sh {ENV} {VM} {COMMAND} {FROM} {TO}"
+template = "callbotConnect.sh {ENV} {VM} {COMMAND} {FROM} {TO}"
 
 [[columns.actions]]
 label = "simulCall"
-template = "callbot/src/cb-docker/bin/local/simulCall.sh {ENV} {CALLBOT_ID} {CALLER} {MODE} {HANGUP_MODE}"
+template = "simulCall.sh {ENV} {CALLBOT_ID} {CALLER} {MODE} {HANGUP_MODE}"
 
 [[columns.actions]]
 label = "getLastDump"
-template = "callbot/src/cb-docker/bin/local/getLastDump.sh -e {ENV} -p {PROJECT}"
+template = "getLastDump.sh -e {ENV} -p {PROJECT}"
 
 [[columns.actions]]
 label = "mockAudio"
-template = "callbot/src/cb-docker/bin/local/mockAudio.sh {AUDIO_FILE}"
+template = "mockAudio.sh {AUDIO_FILE}"
 
 [[columns.actions]]
 label = "startSftpAndWebdavServers"
-template = "callbot/src/cb-docker/bin/local/startSftpAndWebdavServers.sh"
+template = "startSftpAndWebdavServers.sh"
 
 [[columns.actions]]
 label = "copyRecordsFromPrp"
-template = "callbot/src/cb-docker/bin/local/copyRecordsFromPrp.sh"
+template = "copyRecordsFromPrp.sh"
 
 [[columns.actions]]
 label = "startEvaliaApache"
-template = "callbot/src/cb-docker/bin/local/startEvaliaApache.sh"
+template = "startEvaliaApache.sh"
 
 [[columns.actions]]
 label = "openTunnelToPrp"
-template = "callbot/src/cb-docker/bin/local/openTunnelToPrp.sh"
+template = "openTunnelToPrp.sh"
 
 [[columns.actions]]
 label = "tunnelTools"
-template = "callbot/src/cb-docker/bin/local/tunnelTools.sh"
+template = "tunnelTools.sh"
 
 [[columns.actions]]
 label = "tunnelToQualifMgo01"
-template = "callbot/src/cb-docker/bin/local/tunnelToQualifMgo01.sh"
+template = "tunnelToQualifMgo01.sh"
 
 [[columns.actions]]
 label = "tunnelToQualifDebugOch01"
-template = "callbot/src/cb-docker/bin/local/tunnelToQualifDebugOch01.sh"
+template = "tunnelToQualifDebugOch01.sh"
 
 [[columns.actions]]
 label = "tunnelToPreprodVoxygen"
-template = "callbot/src/cb-docker/bin/local/tunnelToPreprodVoxygen.sh"
+template = "tunnelToPreprodVoxygen.sh"
 
 [[columns.actions]]
 label = "reverseTunnelFromQualifOrchestrator"
-template = "callbot/src/cb-docker/bin/local/reverseTunnelFromQualifOrchestrator.sh"
+template = "reverseTunnelFromQualifOrchestrator.sh"
 
 [[columns.actions]]
 label = "generateConfFromVault"
-template = "callbot/src/cb-docker/bin/local/generateConfFromVault.sh"
+template = "generateConfFromVault.sh"
 
 [[columns.actions]]
 label = "availabilityHelpers"
-template = "callbot/src/cb-docker/bin/local/availabilityHelpers.sh"
+template = "availabilityHelpers.sh"
 
 [[columns]]
 id = "exhaustive_misc"
@@ -141,142 +141,142 @@ title = "Misc & Tools"
 
 [[columns.actions]]
 label = "getMVPCallLogs"
-template = "callbot/src/cb-docker/misc/getMVPCallLogs.sh"
+template = "getMVPCallLogs.sh"
 
 [[columns.actions]]
 label = "azureTTS"
-template = "callbot/src/cb-docker/misc/azureTTS.sh"
+template = "azureTTS.sh"
 
 [[columns.actions]]
 label = "azureSTT"
-template = "callbot/src/cb-docker/misc/azureSTT.sh"
+template = "azureSTT.sh"
 
 [[columns.actions]]
 label = "googleSTT"
-template = "callbot/src/cb-docker/misc/googleSTT.sh"
+template = "googleSTT.sh"
 
 [[columns.actions]]
 label = "googleSTT_V2"
-template = "callbot/src/cb-docker/misc/googleSTT_V2.sh"
+template = "googleSTT_V2.sh"
 
 [[columns.actions]]
 label = "googleSTT_AirFrance"
-template = "callbot/src/cb-docker/misc/googleSTT_AirFrance.sh"
+template = "googleSTT_AirFrance.sh"
 
 [[columns.actions]]
 label = "callTTSVoxygen"
-template = "callbot/src/cb-docker/misc/TTS/callTTSVoxygen.sh"
+template = "TTS/callTTSVoxygen.sh"
 
 [[columns.actions]]
 label = "tts helper"
-template = "callbot/src/cb-docker/misc/TTS/tts.sh"
+template = "TTS/tts.sh"
 
 [[columns.actions]]
 label = "getChannelId"
-template = "callbot/src/cb-docker/misc/getChannelId.sh"
+template = "getChannelId.sh"
 
 [[columns.actions]]
 label = "botHealthCheck"
-template = "callbot/src/cb-docker/misc/botHealthCheck.sh"
+template = "botHealthCheck.sh"
 
 [[columns.actions]]
 label = "haproxy run"
-template = "callbot/src/cb-docker/misc/haproxy/run.sh"
+template = "haproxy/run.sh"
 
 [[columns.actions]]
 label = "haproxy docker-entrypoint"
-template = "callbot/src/cb-docker/misc/haproxy/docker-entrypoint.sh"
+template = "haproxy/docker-entrypoint.sh"
 
 [[columns.actions]]
 label = "haproxy clearTableContent"
-template = "callbot/src/cb-docker/misc/haproxy/clearTableContent.sh"
+template = "haproxy/clearTableContent.sh"
 
 [[columns.actions]]
 label = "extractLogsFromMongoToCSV"
-template = "callbot/src/cb-docker/misc/extractLogsFromMongoToCSV.sh"
+template = "extractLogsFromMongoToCSV.sh"
 
 [[columns.actions]]
 label = "manageDocumentsOnCEO"
-template = "callbot/src/cb-docker/misc/manageDocumentsOnCEO.sh"
+template = "manageDocumentsOnCEO.sh"
 
 [[columns.actions]]
 label = "clusterMongo"
-template = "callbot/src/cb-docker/misc/clusterMongo/clusterMongo.sh"
+template = "clusterMongo/clusterMongo.sh"
 
 [[columns.actions]]
 label = "clusterMongo dbrestore"
-template = "callbot/src/cb-docker/misc/clusterMongo/scripts/dbrestore.sh"
+template = "clusterMongo/scripts/dbrestore.sh"
 
 [[columns.actions]]
 label = "clusterMongo initReplication"
-template = "callbot/src/cb-docker/misc/clusterMongo/scripts/initReplication.sh"
+template = "clusterMongo/scripts/initReplication.sh"
 
 [[columns.actions]]
 label = "migrationMongo upgradeTo6.0"
-template = "callbot/src/cb-docker/misc/migrationMongo/upgradeTo6.0.sh"
+template = "migrationMongo/upgradeTo6.0.sh"
 
 [[columns.actions]]
 label = "migrationMongo upgradeTo6.0.27"
-template = "callbot/src/cb-docker/misc/migrationMongo/upgradeTo6.0.27.sh"
+template = "migrationMongo/upgradeTo6.0.27.sh"
 
 [[columns.actions]]
 label = "migrationMongo upgradeTo5.0"
-template = "callbot/src/cb-docker/misc/migrationMongo/upgradeTo5.0.sh"
+template = "migrationMongo/upgradeTo5.0.sh"
 
 [[columns.actions]]
 label = "migrationMongo upgradeTo4.4"
-template = "callbot/src/cb-docker/misc/migrationMongo/upgradeTo4.4.sh"
+template = "migrationMongo/upgradeTo4.4.sh"
 
 [[columns.actions]]
 label = "migrationMongo downgradeTo4.2"
-template = "callbot/src/cb-docker/misc/migrationMongo/downgradeTo4.2.sh"
+template = "migrationMongo/downgradeTo4.2.sh"
 
 [[columns.actions]]
 label = "analyze latency"
-template = "callbot/src/cb-docker/misc/voice_latency/analyze_latency.sh"
+template = "voice_latency/analyze_latency.sh"
 
 [[columns.actions]]
 label = "extract latency"
-template = "callbot/src/cb-docker/misc/voice_latency/extract_latency.sh"
+template = "voice_latency/extract_latency.sh"
 
 [[columns.actions]]
 label = "stats grafana start"
-template = "callbot/src/cb-docker/misc/stats/grafana/start.sh"
+template = "stats/grafana/start.sh"
 
 [[columns.actions]]
 label = "stats grafana stop"
-template = "callbot/src/cb-docker/misc/stats/grafana/stop.sh"
+template = "stats/grafana/stop.sh"
 
 [[columns.actions]]
 label = "stats tableau run"
-template = "callbot/src/cb-docker/misc/stats/tableau/run.sh"
+template = "stats/tableau/run.sh"
 
 [[columns.actions]]
 label = "stats mongodb-charts start"
-template = "callbot/src/cb-docker/misc/stats/mongodb-charts/start.sh"
+template = "stats/mongodb-charts/start.sh"
 
 [[columns.actions]]
 label = "scriptsMVPConnected dispatch"
-template = "callbot/src/cb-docker/misc/scriptsMVPConnected/dispatch_connected.sh"
+template = "scriptsMVPConnected/dispatch_connected.sh"
 
 [[columns.actions]]
 label = "scriptsMVPConnected notifyOrchestrator"
-template = "callbot/src/cb-docker/misc/scriptsMVPConnected/notifyOrchestrator.sh"
+template = "scriptsMVPConnected/notifyOrchestrator.sh"
 
 [[columns.actions]]
 label = "formatMergeRequest (dev)"
-template = "callbot/src/cb-docker/dev/docker_rhel/scripts/formatMergeRequest.sh"
+template = "formatMergeRequest.sh"
 
 [[columns.actions]]
 label = "create-branch (dev)"
-template = "callbot/src/cb-docker/dev/docker_rhel/scripts/create-branch.sh"
+template = "create-branch.sh"
 
 [[columns.actions]]
 label = "scriptsAutoCompletion"
-template = "callbot/src/cb-docker/dev/docker_rhel/scripts/scriptsAutoCompletion.sh"
+template = "scriptsAutoCompletion.sh"
 
 [[columns.actions]]
 label = "dev run (docker_rhel)"
-template = "callbot/src/cb-docker/dev/docker_rhel/scripts/run.sh"
+template = "run.sh"
 
 # End of exhaustive file

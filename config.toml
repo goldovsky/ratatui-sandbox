@@ -1,282 +1,302 @@
-# CALLBOT Configuration File (exhaustive)
-# Every discovered shell script in callbot/src/cb-docker is exposed as an action.
+# CALLBOT Configuration File (updated)
+# This file defines columns, actions, and parameters for the launcher UI. Paths point to scripts under callbot/src/cb-docker
 
 [app]
-title = "CALLBOT - Exhaustive"
-subtitle = "All scripts from callbot/src/cb-docker"
+title = "CALLBOT"
+subtitle = "One TUI to rule them all, One TUI to bring them all, and in the terminal bind them. (curated)"
 
-# Note: this file was auto-generated to include a broad set of helper scripts found under callbot/src/cb-docker.
-
+# =============================================================================
+# PROJECTS COLUMN
+# =============================================================================
 [[columns]]
-id = "exhaustive_projects"
-title = "Projects & Platform"
+id = "projects"
+title = "Projects"
 
 [[columns.actions]]
-label = "getCallbotPackage"
-template = "callbot/src/cb-docker/bin/platform/getCallbotPackage.sh"
+label = "Create Merge Requests"
+template = "cmr"
+description = "Creates merge requests for the current branch"
 
 [[columns.actions]]
-label = "synth (platform)"
-template = "callbot/src/cb-docker/bin/platform/synth.sh"
+label = "Format Merge Requests (for Teams)"
+template = "fmr"
+description = "Formats merge requests for Teams notifications"
 
 [[columns.actions]]
-label = "platform maj"
-template = "callbot/src/cb-docker/bin/platform/maj.sh"
+label = "Deploy Snapshot (local)"
+template = "deploySnapshot.sh"
+description = "Deploy a snapshot (runs deploySnapshot.sh in cb-docker)"
 
 [[columns.actions]]
-label = "cleanUpDeployment"
-template = "callbot/src/cb-docker/bin/platform/cleanUpDeployment.sh"
+label = "Deploy Package"
+template = "deployPackage.sh"
+description = "Deploy application package to environment"
 
 [[columns.actions]]
-label = "ci run container"
-template = "callbot/src/cb-docker/ci-cd/runCIContainer.sh"
+label = "Publish to Artifactory"
+template = "deployOnArtifactory.sh"
+description = "Build/publish artifacts to Artifactory (MVP flow)"
 
 [[columns.actions]]
-label = "buildAndPublishImage (dev)"
-template = "callbot/src/cb-docker/dev/buildAndPublishImage.sh"
+label = "Create Release MR"
+template = "createReleaseMR.sh"
+description = "Create a release Merge Request"
 
 [[columns.actions]]
-label = "runDevContainer"
-template = "callbot/src/cb-docker/dev/runDevContainer.sh"
+label = "Merge Release MR (local)"
+template = "mergeReleaseMR.sh"
+description = "Merge release MR locally"
 
 [[columns.actions]]
-label = "createMergeRequest (dev script)"
-template = "callbot/src/cb-docker/dev/docker_rhel/scripts/createMergeRequest.sh"
+label = "Prepare Release Package"
+template = "releasePackage.sh"
+description = "Create a release package (local)"
 
+[[columns.actions]]
+label = "Get Callbot Package"
+template = "getCallbotPackage.sh"
+description = "Download or prepare callbot package"
+
+# =============================================================================
+# SERVERS COLUMN
+# =============================================================================
 [[columns]]
-id = "exhaustive_local"
-title = "Local Helpers"
+id = "servers"
+title = "Servers"
 
 [[columns.actions]]
-label = "createReleaseMR"
-template = "callbot/src/cb-docker/bin/local/createReleaseMR.sh"
+label = "Get BDD Dumps"
+template = "getLastDump.sh -e {ENV} -p {PROJECT}"
+description = "Downloads the latest database dump"
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+description = "Target environment"
+options = [
+    { value = "qlf", label = "Qualification" },
+    { value = "pprod", label = "Pre-Prod" },
+    { value = "prod", label = "Production" }
+]
+
+[[columns.actions.parameters]]
+name = "PROJECT"
+placeholder = "{PROJECT}"
+param_type = "text"
+required = false
+description = "Project name (defaults to cb-orchestrator)"
 
 [[columns.actions]]
-label = "mergeReleaseMR"
-template = "callbot/src/cb-docker/bin/local/mergeReleaseMR.sh"
+label = "SSH / File Ops via callbotConnect"
+template = "callbotConnect.sh {ENV} {SERVER} {COMMAND} {FROM} {TO}"
+description = "Run SSH or scp to remote server (use COMMAND: ssh|get|put|ssh-copy-id|remove-host-signature)"
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+description = "Target environment"
+options = [
+    { value = "qlf", label = "Qualification" },
+    { value = "pprod", label = "Pre-Prod" },
+    { value = "prod", label = "Production" }
+]
+
+[[columns.actions.parameters]]
+name = "SERVER"
+placeholder = "{SERVER}"
+param_type = "text"
+required = true
+description = "Server mnemonic (e.g. mgo01, hap01, och01...)"
+
+[[columns.actions.parameters]]
+name = "COMMAND"
+placeholder = "{COMMAND}"
+param_type = "select"
+required = true
+description = "Action to perform"
+options = [
+    { value = "ssh", label = "SSH (interactive)" },
+    { value = "get", label = "Get (scp from remote)" },
+    { value = "put", label = "Put (scp to remote)" },
+    { value = "ssh-copy-id", label = "Install SSH key" },
+    { value = "remove-host-signature", label = "Remove known_host entry" }
+]
+
+[[columns.actions.parameters]]
+name = "FROM"
+placeholder = "{FROM}"
+param_type = "text"
+required = false
+description = "Source path (for get/put)"
+
+[[columns.actions.parameters]]
+name = "TO"
+placeholder = "{TO}"
+param_type = "text"
+required = false
+description = "Destination path (for get/put)"
 
 [[columns.actions]]
-label = "releasePackage"
-template = "callbot/src/cb-docker/bin/local/releasePackage.sh"
+label = "Connect to VM (helper)"
+template = "connectToVM.sh {ENV} {VM}"
+description = "Helper to connect to specific VM"
 
-[[columns.actions]]
-label = "getCommitsBetweenEnvs"
-template = "callbot/src/cb-docker/bin/local/getCommitsBetweenEnvs.sh"
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+description = "Target environment"
+options = [
+    { value = "qlf", label = "Qualification" },
+    { value = "pprod", label = "Pre-Prod" },
+    { value = "prod", label = "Production" }
+]
 
-[[columns.actions]]
-label = "checkServicesStatus"
-template = "callbot/src/cb-docker/bin/local/checkServicesStatus.sh"
+[[columns.actions.parameters]]
+name = "VM"
+placeholder = "{VM}"
+param_type = "text"
+required = true
+description = "VM mnemonic (e.g. mgo01, hap01, och01...)"
 
-[[columns.actions]]
-label = "deploySnapshot"
-template = "callbot/src/cb-docker/bin/local/deploySnapshot.sh"
-
-[[columns.actions]]
-label = "getDeployedVersions"
-template = "callbot/src/cb-docker/bin/local/getDeployedVersions.sh {ENV} {SERVICE}"
-
-[[columns.actions]]
-label = "callbotConnect"
-template = "callbot/src/cb-docker/bin/local/callbotConnect.sh {ENV} {VM} {COMMAND} {FROM} {TO}"
-
-[[columns.actions]]
-label = "simulCall"
-template = "callbot/src/cb-docker/bin/local/simulCall.sh {ENV} {CALLBOT_ID} {CALLER} {MODE} {HANGUP_MODE}"
-
-[[columns.actions]]
-label = "getLastDump"
-template = "callbot/src/cb-docker/bin/local/getLastDump.sh -e {ENV} -p {PROJECT}"
-
-[[columns.actions]]
-label = "mockAudio"
-template = "callbot/src/cb-docker/bin/local/mockAudio.sh {AUDIO_FILE}"
-
-[[columns.actions]]
-label = "startSftpAndWebdavServers"
-template = "callbot/src/cb-docker/bin/local/startSftpAndWebdavServers.sh"
-
-[[columns.actions]]
-label = "copyRecordsFromPrp"
-template = "callbot/src/cb-docker/bin/local/copyRecordsFromPrp.sh"
-
-[[columns.actions]]
-label = "startEvaliaApache"
-template = "callbot/src/cb-docker/bin/local/startEvaliaApache.sh"
-
-[[columns.actions]]
-label = "openTunnelToPrp"
-template = "callbot/src/cb-docker/bin/local/openTunnelToPrp.sh"
-
-[[columns.actions]]
-label = "tunnelTools"
-template = "callbot/src/cb-docker/bin/local/tunnelTools.sh"
-
-[[columns.actions]]
-label = "tunnelToQualifMgo01"
-template = "callbot/src/cb-docker/bin/local/tunnelToQualifMgo01.sh"
-
-[[columns.actions]]
-label = "tunnelToQualifDebugOch01"
-template = "callbot/src/cb-docker/bin/local/tunnelToQualifDebugOch01.sh"
-
-[[columns.actions]]
-label = "tunnelToPreprodVoxygen"
-template = "callbot/src/cb-docker/bin/local/tunnelToPreprodVoxygen.sh"
-
-[[columns.actions]]
-label = "reverseTunnelFromQualifOrchestrator"
-template = "callbot/src/cb-docker/bin/local/reverseTunnelFromQualifOrchestrator.sh"
-
-[[columns.actions]]
-label = "generateConfFromVault"
-template = "callbot/src/cb-docker/bin/local/generateConfFromVault.sh"
-
-[[columns.actions]]
-label = "availabilityHelpers"
-template = "callbot/src/cb-docker/bin/local/availabilityHelpers.sh"
-
+# =============================================================================
+# TOOLS COLUMN
+# =============================================================================
 [[columns]]
-id = "exhaustive_misc"
-title = "Misc & Tools"
+id = "tools"
+title = "Tools"
 
 [[columns.actions]]
-label = "getMVPCallLogs"
-template = "callbot/src/cb-docker/misc/getMVPCallLogs.sh"
+label = "Simulate Call (interactive)"
+template = "simulCall.sh {ENV} {CALLBOT_ID} {CALLER} {MODE} {HANGUP_MODE}"
+description = "Simulates a phone call to an orchestrator (interactive). See script usage for MODE and HANGUP options."
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+description = "Target environment"
+options = [
+    { value = "local", label = "Local" },
+    { value = "localOld", label = "Local (old)" },
+    { value = "qlf", label = "Qualification" },
+    { value = "pprod", label = "Pre-Prod" },
+    { value = "prod_vca", label = "Production VCA" },
+    { value = "prod_cca", label = "Production CCA" }
+]
+
+[[columns.actions.parameters]]
+name = "CALLBOT_ID"
+placeholder = "{CALLBOT_ID}"
+param_type = "text"
+required = true
+description = "Callbot identifier (botId)"
+
+[[columns.actions.parameters]]
+name = "CALLER"
+placeholder = "{CALLER}"
+param_type = "text"
+required = true
+description = "Caller phone number"
+
+[[columns.actions.parameters]]
+name = "MODE"
+placeholder = "{MODE}"
+param_type = "select"
+required = false
+description = "Simulation mode (defaults to MVP_STANDALONE)"
+options = [
+    { value = "MVP_STANDALONE", label = "MVP_STANDALONE" },
+    { value = "MVP_CONNECTED", label = "MVP_CONNECTED" },
+    { value = "GENERIC_JSON", label = "GENERIC_JSON" },
+    { value = "GENERIC_JSON_V2", label = "GENERIC_JSON_V2" },
+    { value = "GENERIC_CHAT", label = "GENERIC_CHAT" }
+]
+
+[[columns.actions.parameters]]
+name = "HANGUP_MODE"
+placeholder = "{HANGUP_MODE}"
+param_type = "select"
+required = false
+description = "Hangup behaviour"
+options = [
+    { value = "NORMAL", label = "NORMAL" },
+    { value = "HANGUP_AFTER_FIRST_REQUEST", label = "HANGUP_AFTER_FIRST_REQUEST" },
+    { value = "HANGUP_AFTER_SENDING_DATA", label = "HANGUP_AFTER_SENDING_DATA" },
+    { value = "HANGUP_WHILE_SENDING_DATA", label = "HANGUP_WHILE_SENDING_DATA" }
+]
 
 [[columns.actions]]
-label = "azureTTS"
-template = "callbot/src/cb-docker/misc/azureTTS.sh"
+label = "Mock Audio (playback)"
+template = "mockAudio.sh {AUDIO_FILE}"
+description = "Play or choose a mock audio file used for RECORD tests"
+
+[[columns.actions.parameters]]
+name = "AUDIO_FILE"
+placeholder = "{AUDIO_FILE}"
+param_type = "text"
+required = false
+description = "Audio filename (defaults available in misc/)"
 
 [[columns.actions]]
-label = "azureSTT"
-template = "callbot/src/cb-docker/misc/azureSTT.sh"
+label = "Get MVP Call Logs"
+template = "getMVPCallLogs.sh {FROM} {TO}"
+description = "Collect MVP call logs between two dates or patterns"
+
+[[columns.actions.parameters]]
+name = "FROM"
+placeholder = "{FROM}"
+param_type = "text"
+required = false
+description = "From date / pattern"
+
+[[columns.actions.parameters]]
+name = "TO"
+placeholder = "{TO}"
+param_type = "text"
+required = false
+description = "To date / pattern"
 
 [[columns.actions]]
-label = "googleSTT"
-template = "callbot/src/cb-docker/misc/googleSTT.sh"
+label = "Get Deployed Versions"
+template = "getDeployedVersions.sh {ENV} {SERVICE}"
+description = "Fetch deployed versions for a service in an environment"
+
+[[columns.actions.parameters]]
+name = "ENV"
+placeholder = "{ENV}"
+param_type = "select"
+required = true
+description = "Target environment"
+options = [
+    { value = "qlf", label = "Qualification" },
+    { value = "pprod", label = "Pre-Prod" },
+    { value = "prod", label = "Production" }
+]
+
+[[columns.actions.parameters]]
+name = "SERVICE"
+placeholder = "{SERVICE}"
+param_type = "text"
+required = false
+description = "Service name (optional)"
 
 [[columns.actions]]
-label = "googleSTT_V2"
-template = "callbot/src/cb-docker/misc/googleSTT_V2.sh"
+label = "Get Channel Id"
+template = "getChannelId.sh {PARAMS}"
+description = "Utility to retrieve channel id (script in misc/)"
 
-[[columns.actions]]
-label = "googleSTT_AirFrance"
-template = "callbot/src/cb-docker/misc/googleSTT_AirFrance.sh"
+[[columns.actions.parameters]]
+name = "PARAMS"
+placeholder = "{PARAMS}"
+param_type = "text"
+required = false
+description = "Optional params for the helper script"
 
-[[columns.actions]]
-label = "callTTSVoxygen"
-template = "callbot/src/cb-docker/misc/TTS/callTTSVoxygen.sh"
-
-[[columns.actions]]
-label = "tts helper"
-template = "callbot/src/cb-docker/misc/TTS/tts.sh"
-
-[[columns.actions]]
-label = "getChannelId"
-template = "callbot/src/cb-docker/misc/getChannelId.sh"
-
-[[columns.actions]]
-label = "botHealthCheck"
-template = "callbot/src/cb-docker/misc/botHealthCheck.sh"
-
-[[columns.actions]]
-label = "haproxy run"
-template = "callbot/src/cb-docker/misc/haproxy/run.sh"
-
-[[columns.actions]]
-label = "haproxy docker-entrypoint"
-template = "callbot/src/cb-docker/misc/haproxy/docker-entrypoint.sh"
-
-[[columns.actions]]
-label = "haproxy clearTableContent"
-template = "callbot/src/cb-docker/misc/haproxy/clearTableContent.sh"
-
-[[columns.actions]]
-label = "extractLogsFromMongoToCSV"
-template = "callbot/src/cb-docker/misc/extractLogsFromMongoToCSV.sh"
-
-[[columns.actions]]
-label = "manageDocumentsOnCEO"
-template = "callbot/src/cb-docker/misc/manageDocumentsOnCEO.sh"
-
-[[columns.actions]]
-label = "clusterMongo"
-template = "callbot/src/cb-docker/misc/clusterMongo/clusterMongo.sh"
-
-[[columns.actions]]
-label = "clusterMongo dbrestore"
-template = "callbot/src/cb-docker/misc/clusterMongo/scripts/dbrestore.sh"
-
-[[columns.actions]]
-label = "clusterMongo initReplication"
-template = "callbot/src/cb-docker/misc/clusterMongo/scripts/initReplication.sh"
-
-[[columns.actions]]
-label = "migrationMongo upgradeTo6.0"
-template = "callbot/src/cb-docker/misc/migrationMongo/upgradeTo6.0.sh"
-
-[[columns.actions]]
-label = "migrationMongo upgradeTo6.0.27"
-template = "callbot/src/cb-docker/misc/migrationMongo/upgradeTo6.0.27.sh"
-
-[[columns.actions]]
-label = "migrationMongo upgradeTo5.0"
-template = "callbot/src/cb-docker/misc/migrationMongo/upgradeTo5.0.sh"
-
-[[columns.actions]]
-label = "migrationMongo upgradeTo4.4"
-template = "callbot/src/cb-docker/misc/migrationMongo/upgradeTo4.4.sh"
-
-[[columns.actions]]
-label = "migrationMongo downgradeTo4.2"
-template = "callbot/src/cb-docker/misc/migrationMongo/downgradeTo4.2.sh"
-
-[[columns.actions]]
-label = "analyze latency"
-template = "callbot/src/cb-docker/misc/voice_latency/analyze_latency.sh"
-
-[[columns.actions]]
-label = "extract latency"
-template = "callbot/src/cb-docker/misc/voice_latency/extract_latency.sh"
-
-[[columns.actions]]
-label = "stats grafana start"
-template = "callbot/src/cb-docker/misc/stats/grafana/start.sh"
-
-[[columns.actions]]
-label = "stats grafana stop"
-template = "callbot/src/cb-docker/misc/stats/grafana/stop.sh"
-
-[[columns.actions]]
-label = "stats tableau run"
-template = "callbot/src/cb-docker/misc/stats/tableau/run.sh"
-
-[[columns.actions]]
-label = "stats mongodb-charts start"
-template = "callbot/src/cb-docker/misc/stats/mongodb-charts/start.sh"
-
-[[columns.actions]]
-label = "scriptsMVPConnected dispatch"
-template = "callbot/src/cb-docker/misc/scriptsMVPConnected/dispatch_connected.sh"
-
-[[columns.actions]]
-label = "scriptsMVPConnected notifyOrchestrator"
-template = "callbot/src/cb-docker/misc/scriptsMVPConnected/notifyOrchestrator.sh"
-
-[[columns.actions]]
-label = "formatMergeRequest (dev)"
-template = "callbot/src/cb-docker/dev/docker_rhel/scripts/formatMergeRequest.sh"
-
-[[columns.actions]]
-label = "create-branch (dev)"
-template = "callbot/src/cb-docker/dev/docker_rhel/scripts/create-branch.sh"
-
-[[columns.actions]]
-label = "scriptsAutoCompletion"
-template = "callbot/src/cb-docker/dev/docker_rhel/scripts/scriptsAutoCompletion.sh"
-
-[[columns.actions]]
-label = "dev run (docker_rhel)"
-template = "callbot/src/cb-docker/dev/docker_rhel/scripts/run.sh"
-
-# End of exhaustive file
+# End of file

@@ -2,8 +2,8 @@
 # A small, curated set of the most commonly used scripts for quick access.
 
 [app]
-title = "CALLBOT - Curated"
-subtitle = "Carefully selected common operations"
+title = "CALLBOT"
+subtitle = "One TUI to rule them all, One TUI to bring them all, and in the terminal bind them. (curated)"
 
 [[columns]]
 id = "projects"
@@ -11,17 +11,17 @@ title = "Projects"
 
 [[columns.actions]]
 label = "Create Release MR"
-template = "callbot/src/cb-docker/bin/local/createReleaseMR.sh"
+template = "createReleaseMR.sh"
 description = "Create a release Merge Request"
 
 [[columns.actions]]
 label = "Merge Release MR"
-template = "callbot/src/cb-docker/bin/local/mergeReleaseMR.sh"
+template = "mergeReleaseMR.sh"
 description = "Merge a release MR locally"
 
 [[columns.actions]]
 label = "Publish to Artifactory"
-template = "callbot/src/cb-docker/bin/mvp/deployOnArtifactory.sh"
+template = "deployOnArtifactory.sh"
 description = "Publish artifacts to Artifactory"
 
 [[columns]]
@@ -30,7 +30,7 @@ title = "Servers"
 
 [[columns.actions]]
 label = "Get BDD Dumps"
-template = "callbot/src/cb-docker/bin/local/getLastDump.sh -e {ENV} -p {PROJECT}"
+template = "getLastDump.sh -e {ENV} -p {PROJECT}"
 description = "Download latest database dump"
 
 [[columns.actions.parameters]]
@@ -52,7 +52,7 @@ required = false
 
 [[columns.actions]]
 label = "SSH to server (quick)"
-template = "callbot/src/cb-docker/bin/local/callbotConnect.sh {ENV} {SERVER} ssh"
+template = "callbotConnect.sh {ENV} {SERVER} ssh"
 description = "SSH to a server using callbotConnect helper"
 
 [[columns.actions.parameters]]
@@ -78,7 +78,7 @@ title = "Tools"
 
 [[columns.actions]]
 label = "Simulate Call"
-template = "callbot/src/cb-docker/bin/local/simulCall.sh {ENV} {CALLBOT_ID} {CALLER}"
+template = "simulCall.sh {ENV} {CALLBOT_ID} {CALLER}"
 description = "Interactive simulation of a call (default mode)"
 
 [[columns.actions.parameters]]
@@ -106,15 +106,15 @@ required = true
 
 [[columns.actions]]
 label = "Mock Audio"
-template = "callbot/src/cb-docker/bin/local/mockAudio.sh"
+template = "mockAudio.sh"
 
 [[columns.actions]]
 label = "Get MVP Call Logs"
-template = "callbot/src/cb-docker/misc/getMVPCallLogs.sh"
+template = "getMVPCallLogs.sh"
 
 [[columns.actions]]
 label = "Get Deployed Versions"
-template = "callbot/src/cb-docker/bin/local/getDeployedVersions.sh {ENV} {SERVICE}"
+template = "getDeployedVersions.sh {ENV} {SERVICE}"
 
 [[columns.actions.parameters]]
 name = "ENV"
