@@ -255,7 +255,7 @@ pub fn run_app(
 
             // Help bar content
             let help_text =
-                "Tab: switch column   Up/Down: navigate   Enter: details (e:Echo r:Run)   q: quit";
+                "Tab: switch column   Up/Down: navigate   Enter: details (e:Echo r:Run)   q: quit | *: Optional";
 
             // If the help area is tall enough, render a bordered block and draw the
             // help text inside the block inner rect. Otherwise render the help line

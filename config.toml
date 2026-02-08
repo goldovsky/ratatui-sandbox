@@ -22,10 +22,24 @@ label = "Format Merge Requests (for Teams)"
 template = "fmr"
 description = "Formats merge requests for Teams notifications"
 
+[[columns.actions.parameters]]
+name = "URLs"
+placeholder = "{URLs}"
+param_type = "text"
+required = true
+description = "Url(s) of the MR"
+
 [[columns.actions]]
-label = "Deploy Snapshot (local)"
-template = "deploySnapshot.sh"
-description = "Deploy a snapshot (runs deploySnapshot.sh in cb-docker)"
+label = "Deploy Snapshot"
+template = "deploySnapshot.sh {PROJECT}*"
+description = "Deploy a snapshot"
+
+[[columns.actions.parameters]]
+name = "PROJECT"
+placeholder = "{PROJECT}"
+param_type = "text"
+required = false
+description = "Projetc's name"
 
 [[columns.actions]]
 label = "Deploy Package"
