@@ -20,12 +20,43 @@ pub struct ColumnState {
     pub list_state: ListState,
 }
 
+// Helper to build substituted command for action (column index, action index)
+fn build_substituted_command(app: &App, c: usize, a: usize) -> String {
+    let template = app.columns[c].actions[a].template.clone();
+    let mut out = template.clone();
+    for (pidx, param) in app.columns[c].actions[a].parameters.iter().enumerate() {
+        let val = if param.param_type == crate::config::ParameterType::Select {
+            let sel = app.param_selected[c][a][pidx];
+            param
+                .options
+                .get(sel)
+                .map(|o| o.value.clone())
+                .unwrap_or_default()
+        } else {
+            app.param_values[c][a][pidx].clone()
+        };
+        out = out.replace(&param.placeholder, &val);
+    }
+    out
+}
+
 pub struct App {
     pub config: Config,
     pub columns: Vec<ColumnState>,
     pub focused_column: usize,
     // when true, the middle area shows the details view for the focused action
     pub show_details: bool,
+    // Index of focused parameter within the details view when open
+    pub details_focused_param: usize,
+    // text edit mode state when editing a text parameter in the details view
+    pub details_in_edit: bool,
+    pub details_edit_buffer: String,
+    pub details_edit_original: String,
+    // For each column -> action -> parameter (when select), the selected option index
+    // Layout: [column_idx][action_idx][param_idx] => usize (option index or 0)
+    pub param_selected: Vec<Vec<Vec<usize>>>,
+    // Current parameter values (strings) for substitution: [col][action][param]
+    pub param_values: Vec<Vec<Vec<String>>>,
 }
 
 impl App {
@@ -49,10 +80,82 @@ impl App {
             .collect();
 
         Self {
-            config,
+            config: config.clone(),
             columns,
             focused_column: 0,
             show_details: false,
+            details_focused_param: 0,
+            details_in_edit: false,
+            details_edit_buffer: String::new(),
+            details_edit_original: String::new(),
+            // initialize param_selected to match config structure
+            // for select parameters, prefer the parameter.default value when present
+            param_selected: config
+                .columns
+                .iter()
+                .map(|col| {
+                    col.actions
+                        .iter()
+                        .map(|act| {
+                            act.parameters
+                                .iter()
+                                .map(|p| {
+                                    if p.param_type == crate::config::ParameterType::Select {
+                                        if let Some(ref def) = p.default {
+                                            // find index of option whose value matches default
+                                            p.options
+                                                .iter()
+                                                .position(|o| &o.value == def)
+                                                .unwrap_or(0)
+                                        } else {
+                                            0usize
+                                        }
+                                    } else {
+                                        0usize
+                                    }
+                                })
+                                .collect()
+                        })
+                        .collect()
+                })
+                .collect(),
+            // initialize parameter values: for selects prefer parameter.default -> matching option value; else first option.
+            param_values: config
+                .columns
+                .iter()
+                .map(|col| {
+                    col.actions
+                        .iter()
+                        .map(|act| {
+                            act.parameters
+                                .iter()
+                                .enumerate()
+                                .map(|(_pidx, p)| {
+                                    if p.param_type == crate::config::ParameterType::Select {
+                                        if let Some(ref def) = p.default {
+                                            p.options
+                                                .iter()
+                                                .find(|o| &o.value == def)
+                                                .map(|o| o.value.clone())
+                                                .or_else(|| {
+                                                    p.options.get(0).map(|o| o.value.clone())
+                                                })
+                                                .unwrap_or_default()
+                                        } else {
+                                            p.options
+                                                .get(0)
+                                                .map(|o| o.value.clone())
+                                                .unwrap_or_default()
+                                        }
+                                    } else {
+                                        p.default.clone().unwrap_or_default()
+                                    }
+                                })
+                                .collect()
+                        })
+                        .collect()
+                })
+                .collect(),
         }
     }
 
@@ -84,6 +187,15 @@ impl App {
         self.columns
             .get(self.focused_column)
             .and_then(|col| col.list_state.selected().and_then(|i| col.actions.get(i)))
+    }
+
+    fn focused_action_index(&self) -> Option<(usize, usize)> {
+        if let Some(col) = self.columns.get(self.focused_column) {
+            if let Some(act_idx) = col.list_state.selected() {
+                return Some((self.focused_column, act_idx));
+            }
+        }
+        None
     }
 
     fn column_count(&self) -> usize {
@@ -240,15 +352,59 @@ pub fn run_app(
                             Style::default().add_modifier(Modifier::BOLD),
                         )));
 
-                        for param in &action.parameters {
+                for (idx, param) in action.parameters.iter().enumerate() {
                             let required_marker = if param.required { " *" } else { "" };
-                            let param_type = format!("{:?}", param.param_type).to_lowercase();
 
-                            lines.push(Spans::from(vec![
-                                Span::raw("  "),
-                                Span::styled(&param.name, Style::default().fg(Color::Yellow)),
-                                Span::raw(format!(" ({}){}", param_type, required_marker)),
-                            ]));
+                            // Parameter header line; omit type suffix for selects
+                            let mut spans = vec![Span::raw("  "), Span::styled(&param.name, Style::default().fg(Color::Yellow))];
+                            if param.param_type == crate::config::ParameterType::Select {
+                                spans.push(Span::raw(format!("{}  ", required_marker)));
+                            } else {
+                                spans.push(Span::raw(format!(" {}  ", required_marker)));
+                            }
+
+                            // If select, render options inline with highlight for selected
+                            if param.param_type == crate::config::ParameterType::Select {
+                                if let Some((c, a)) = app.focused_action_index() {
+                                    let sel = app.param_selected[c][a][idx];
+                                    // Render options on a separate line under the parameter
+                                    lines.push(Spans::from(vec![Span::raw("    ")]));
+                                    let mut opt_spans: Vec<Span> = Vec::new();
+                                    for (oi, opt) in param.options.iter().enumerate() {
+                                        // color mapping for environment-like options
+                                        let styled = match opt.value.as_str() {
+                                            "qlf" => Style::default().fg(Color::Green),
+                                            "pprod" | "pprod_legacy" => Style::default().fg(Color::Rgb(255, 165, 0)),
+                                            v if v.starts_with("prod") => Style::default().fg(Color::Red),
+                                            _ => Style::default(),
+                                        };
+
+                                        if oi == sel {
+                                            // selected: bold + distinct fg
+                                            opt_spans.push(Span::styled(format!("[{}] ", opt.label), styled.add_modifier(Modifier::BOLD)));
+                                        } else {
+                                            opt_spans.push(Span::styled(format!(" {}  ", opt.label), styled));
+                                        }
+                                    }
+                                    lines.push(Spans::from(opt_spans));
+                                }
+                            } else {
+                                // for text params, show current value
+                                if let Some((c, a)) = app.focused_action_index() {
+                                    let val = app.param_values[c][a][idx].clone();
+                                    spans.push(Span::raw(format!(": {}", val)));
+                                }
+                            }
+
+                            // indicate focus with a pointer glyph on the start of the line
+                            if idx == app.details_focused_param {
+                                let pointer_style = if app.details_in_edit { Style::default().fg(Color::Yellow).bg(Color::Rgb(40,40,40)) } else { Style::default().fg(Color::Yellow) };
+                                let mut row = vec![Span::styled("➜ ", pointer_style)];
+                                row.extend(spans);
+                                lines.push(Spans::from(row));
+                            } else {
+                                lines.push(Spans::from(spans));
+                            }
 
                             if let Some(ref desc) = param.description {
                                 lines.push(Spans::from(vec![
@@ -283,10 +439,11 @@ pub fn run_app(
                 .split(chunks[2]);
 
             // show the action template in the preview
-            let preview_line = app
-                .focused_action()
-                .map(|a| a.template.clone())
-                .unwrap_or_default();
+            // Build preview_line by substituting parameter placeholders with current values
+            let mut preview_line = String::new();
+                    if let Some((c, a)) = app.focused_action_index() {
+                        preview_line = build_substituted_command(&app, c, a);
+                    }
 
             // Draw bordered preview and render a single-line paragraph inside
             let preview_area = bottom_chunks[0];
@@ -362,6 +519,39 @@ pub fn run_app(
 
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
+                // If we're in text edit mode, handle editing keys separately
+                if app.details_in_edit {
+                    if let Some((c, a)) = app.focused_action_index() {
+                        let pidx = app.details_focused_param;
+                        match key.code {
+                            KeyCode::Char(ch) => {
+                                // append character to buffer and update param_values
+                                app.details_edit_buffer.push(ch);
+                                app.param_values[c][a][pidx] = app.details_edit_buffer.clone();
+                            }
+                            KeyCode::Backspace => {
+                                app.details_edit_buffer.pop();
+                                app.param_values[c][a][pidx] = app.details_edit_buffer.clone();
+                            }
+                            KeyCode::Enter => {
+                                // accept edit
+                                app.details_in_edit = false;
+                                app.details_edit_original.clear();
+                                app.details_edit_buffer.clear();
+                            }
+                            KeyCode::Esc => {
+                                // cancel edit, revert original value
+                                app.param_values[c][a][pidx] = app.details_edit_original.clone();
+                                app.details_in_edit = false;
+                                app.details_edit_buffer.clear();
+                                app.details_edit_original.clear();
+                            }
+                            _ => {}
+                        }
+                    }
+                    continue;
+                }
+
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Tab => {
@@ -374,13 +564,74 @@ pub fn run_app(
                         }
                     }
                     KeyCode::Up => {
-                        if !app.show_details {
+                        if app.show_details {
+                            if app.details_focused_param > 0 {
+                                app.details_focused_param -= 1;
+                            }
+                        } else {
                             app.move_up()
                         }
                     }
                     KeyCode::Down => {
-                        if !app.show_details {
+                        if app.show_details {
+                            // move to next parameter if available
+                            if let Some((_c, a)) = app.focused_action_index() {
+                                let params_len =
+                                    app.columns[app.focused_column].actions[a].parameters.len();
+                                if app.details_focused_param + 1 < params_len {
+                                    app.details_focused_param += 1;
+                                }
+                            }
+                        } else {
                             app.move_down()
+                        }
+                    }
+                    KeyCode::Left => {
+                        if app.show_details {
+                            if let Some((c, a)) = app.focused_action_index() {
+                                if let Some(param) = app.columns[c].actions[a]
+                                    .parameters
+                                    .get(app.details_focused_param)
+                                {
+                                    if param.param_type == crate::config::ParameterType::Select {
+                                        let opts_len = param.options.len();
+                                        if opts_len > 0 {
+                                            let cur = &mut app.param_selected[c][a]
+                                                [app.details_focused_param];
+                                            if *cur > 0 {
+                                                *cur -= 1;
+                                                // sync param_values with new selection
+                                                app.param_values[c][a][app.details_focused_param] =
+                                                    param.options[*cur].value.clone();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    KeyCode::Right => {
+                        if app.show_details {
+                            if let Some((c, a)) = app.focused_action_index() {
+                                if let Some(param) = app.columns[c].actions[a]
+                                    .parameters
+                                    .get(app.details_focused_param)
+                                {
+                                    if param.param_type == crate::config::ParameterType::Select {
+                                        let opts_len = param.options.len();
+                                        if opts_len > 0 {
+                                            let cur = &mut app.param_selected[c][a]
+                                                [app.details_focused_param];
+                                            if *cur + 1 < opts_len {
+                                                *cur += 1;
+                                                // sync param_values with new selection
+                                                app.param_values[c][a][app.details_focused_param] =
+                                                    param.options[*cur].value.clone();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     KeyCode::PageUp => {
@@ -456,8 +707,26 @@ pub fn run_app(
                         }
                     }
                     KeyCode::Enter => {
-                        // toggle details view in the middle area (header/footer remain)
-                        app.show_details = !app.show_details;
+                        // If details view is not shown, open it. If it is shown and the
+                        // focused parameter is text, enter edit mode. Otherwise toggle details.
+                        if !app.show_details {
+                            app.show_details = true;
+                        } else if let Some((c, a)) = app.focused_action_index() {
+                            if let Some(param) = app.columns[c].actions[a]
+                                .parameters
+                                .get(app.details_focused_param)
+                            {
+                                if param.param_type == crate::config::ParameterType::Text {
+                                    // enter edit mode
+                                    app.details_in_edit = true;
+                                    app.details_edit_original =
+                                        app.param_values[c][a][app.details_focused_param].clone();
+                                    app.details_edit_buffer = app.details_edit_original.clone();
+                                } else {
+                                    // non-text: no-op for Enter while in details
+                                }
+                            }
+                        }
                     }
                     KeyCode::Esc => {
                         // close details view if open
@@ -466,9 +735,10 @@ pub fn run_app(
                         }
                     }
                     KeyCode::Char('r') => {
-                        // when details are shown, allow Run
+                        // when details are shown, run the substituted command
                         if app.show_details {
-                            if let Some(cmd) = app.focused_action().map(|a| a.template.clone()) {
+                            if let Some((c, a)) = app.focused_action_index() {
+                                let cmd = build_substituted_command(&app, c, a);
                                 let _ = run_command(terminal, &cmd);
                             }
                         }
