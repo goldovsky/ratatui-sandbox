@@ -27,16 +27,8 @@ pub fn run_command(
     let status = Command::new("sh").arg("-c").arg(command).status()?;
 
     eprintln!("Command exited with: {}", status);
-
-    // Re-enter the alternate screen and raw mode
-    execute!(
-        terminal.backend_mut(),
-        EnterAlternateScreen,
-        EnableMouseCapture
-    )?;
-    enable_raw_mode()?;
-    terminal.hide_cursor()?;
-    terminal.clear()?;
-
-    Ok(())
+    // Do not re-enter the TUI. Exit the process with the same status code so
+    // the user remains in the spawned shell environment after the command.
+    let code = status.code().unwrap_or(0);
+    std::process::exit(code);
 }

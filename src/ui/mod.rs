@@ -5,9 +5,10 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Span, Spans};
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
 use ratatui::Terminal;
+use std::time::Instant;
 mod title;
 use std::io;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use title::title_spans;
 
 use crate::config::{Action, Config};
@@ -52,6 +53,8 @@ pub struct App {
     pub details_in_edit: bool,
     pub details_edit_buffer: String,
     pub details_edit_original: String,
+    // blinking cursor state (toggle on ticks)
+    pub details_cursor_on: bool,
     // For each column -> action -> parameter (when select), the selected option index
     // Layout: [column_idx][action_idx][param_idx] => usize (option index or 0)
     pub param_selected: Vec<Vec<Vec<usize>>>,
@@ -88,6 +91,7 @@ impl App {
             details_in_edit: false,
             details_edit_buffer: String::new(),
             details_edit_original: String::new(),
+            details_cursor_on: true,
             // initialize param_selected to match config structure
             // for select parameters, prefer the parameter.default value when present
             param_selected: config
@@ -207,7 +211,7 @@ pub fn run_app(
     terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
     mut app: App,
 ) -> io::Result<()> {
-    let tick_rate = Duration::from_millis(200);
+    let tick_rate = Duration::from_millis(500);
     let mut last_tick = Instant::now();
 
     loop {
@@ -389,10 +393,25 @@ pub fn run_app(
                                     lines.push(Spans::from(opt_spans));
                                 }
                             } else {
-                                // for text params, show current value
+                                // for text params, show current value; when editing show the edit buffer
                                 if let Some((c, a)) = app.focused_action_index() {
                                     let val = app.param_values[c][a][idx].clone();
-                                    spans.push(Span::raw(format!(": {}", val)));
+                                    if app.details_in_edit && idx == app.details_focused_param {
+                                        // show the live edit buffer with a blinking cursor
+                                        let buf = app.details_edit_buffer.clone();
+                                        spans.push(Span::raw(": "));
+                                        let cursor = if app.details_cursor_on { "_" } else { " " };
+                                        spans.push(Span::styled(
+                                            format!("{}{}", buf, cursor),
+                                            Style::default().add_modifier(Modifier::BOLD),
+                                        ));
+                                        spans.push(Span::styled(
+                                            " (editing)",
+                                            Style::default().fg(Color::Rgb(150, 150, 150)).add_modifier(Modifier::ITALIC),
+                                        ));
+                                    } else {
+                                        spans.push(Span::raw(format!(": {}", val)));
+                                    }
                                 }
                             }
 
@@ -422,7 +441,7 @@ pub fn run_app(
 
                 lines.push(Spans::from(Span::raw("")));
                 lines.push(Spans::from(Span::styled(
-                    " Press Enter to run or Esc to return to the main page ",
+                    " Press r to run or Esc to return to the main page ",
                     Style::default().fg(Color::Rgb(100, 100, 100)),
                 )));
 
@@ -750,6 +769,8 @@ pub fn run_app(
 
         if last_tick.elapsed() >= tick_rate {
             last_tick = Instant::now();
+            // toggle blinking cursor when in edit mode
+            app.details_cursor_on = !app.details_cursor_on;
         }
     }
 }

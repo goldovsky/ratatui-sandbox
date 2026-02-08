@@ -99,7 +99,7 @@ options = [
 name = "PROJECT"
 placeholder = "{PROJECT}"
 param_type = "text"
-required = false
+required = true
 description = "Project name (defaults to cb-orchestrator)"
 
 [[columns.actions]]
