@@ -8,38 +8,7 @@ use ratatui::Terminal;
 use std::error::Error;
 use std::process::Command;
 
-pub fn dry_run_command(
-    terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
-    command: &str,
-) -> Result<(), Box<dyn Error>> {
-    // Temporarily leave alternate screen and restore cooked mode to print the command
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
-    println!("Dry run: {}", command);
-    println!("Press Enter to continue...");
-
-    // wait for Enter on stdin
-    let mut buf = String::new();
-    let _ = std::io::stdin().read_line(&mut buf)?;
-
-    // restore alternate screen and raw mode
-    execute!(
-        terminal.backend_mut(),
-        EnterAlternateScreen,
-        EnableMouseCapture
-    )?;
-    enable_raw_mode()?;
-    terminal.hide_cursor()?;
-    terminal.clear()?;
-
-    Ok(())
-}
+// dry-run removed: run directly with `run_command` to execute actions
 
 pub fn run_command(
     terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,

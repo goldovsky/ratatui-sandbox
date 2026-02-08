@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use title::title_spans;
 
 use crate::config::{Action, Config};
-use crate::runner::{dry_run_command, run_command};
+use crate::runner::run_command;
 
 /// Column state: tracks selection within a column
 pub struct ColumnState {
@@ -24,6 +24,8 @@ pub struct App {
     pub config: Config,
     pub columns: Vec<ColumnState>,
     pub focused_column: usize,
+    // when true, the middle area shows the details view for the focused action
+    pub show_details: bool,
 }
 
 impl App {
@@ -50,6 +52,7 @@ impl App {
             config,
             columns,
             focused_column: 0,
+            show_details: false,
         }
     }
 
@@ -108,11 +111,12 @@ pub fn run_app(
         terminal.draw(|f| {
             let size = f.size();
 
-            // Obtain the title lines (figlet or fallback) so we can size the top chunk
+            // Obtain the title lines (figlet or fallback) so we can size the top (header) chunk
             let title_lines = title_spans(&app.config.app.title);
             // reserve one extra row for the subtitle we append below
             let title_height = (title_lines.len() as u16).saturating_add(1).max(3);
 
+            // Layout: header (title + subtitle), middle (columns or details), footer (preview + help)
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(1)
@@ -126,8 +130,7 @@ pub fn run_app(
                 )
                 .split(size);
 
-            // To ensure the subtitle is always visible and positioned right below the
-            // figlet output, render the figlet lines then the subtitle then a blank line.
+            // Build header content: figlet lines, subtitle and a blank line below
             let mut title_body: Vec<Spans> = Vec::new();
             title_body.extend(title_lines.clone());
             // subtitle from config
@@ -138,83 +141,169 @@ pub fn run_app(
             // one empty row below subtitle
             title_body.push(Spans::from(Span::raw("")));
 
-            let title = Paragraph::new(title_body).alignment(Alignment::Center);
-            f.render_widget(title, chunks[0]);
+            let header = Paragraph::new(title_body).alignment(Alignment::Center);
+            f.render_widget(header, chunks[0]);
 
-            // Middle columns - dynamic based on config
-            let num_columns = app.column_count();
-            let column_constraints: Vec<Constraint> = (0..num_columns)
-                .map(|_| Constraint::Ratio(1, num_columns as u32))
-                .collect();
-
-            let middle_chunks = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints(column_constraints)
-                .split(chunks[1]);
-
-            // Render each column dynamically
-            for col_idx in 0..app.columns.len() {
-                // snapshot small bits so we don't keep immutable borrows while taking a
-                // mutable borrow for the ListState below
-                let actions = app.columns[col_idx].actions.clone();
-                let title_text = app.columns[col_idx].title.clone();
-                let focused = app.focused_column == col_idx;
-
-                let items: Vec<ListItem> = actions
-                    .iter()
-                    .enumerate()
-                    .map(|(_i, action)| {
-                        let content = vec![Spans::from(Span::raw(format!("  {}  ", action.label)))];
-                        ListItem::new(content)
-                    })
+            // Middle area: either the columns or a details view depending on state
+            if !app.show_details {
+                // Columns layout - dynamic based on config
+                let num_columns = app.column_count();
+                let column_constraints: Vec<Constraint> = (0..num_columns)
+                    .map(|_| Constraint::Ratio(1, num_columns as u32))
                     .collect();
 
-                let col_title = {
-                    let inner = middle_chunks[col_idx].width as usize;
-                    let core = &title_text;
-                    if inner > core.len() + 2 {
-                        format!(" {} ", core)
+                let middle_chunks = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints(column_constraints)
+                    .split(chunks[1]);
+
+                // Render each column dynamically
+                for col_idx in 0..app.columns.len() {
+                    // snapshot small bits so we don't keep immutable borrows while taking a
+                    // mutable borrow for the ListState below
+                    let actions = app.columns[col_idx].actions.clone();
+                    let title_text = app.columns[col_idx].title.clone();
+                    let focused = app.focused_column == col_idx;
+
+                    let items: Vec<ListItem> = actions
+                        .iter()
+                        .enumerate()
+                        .map(|(_i, action)| {
+                            let content = vec![Spans::from(Span::raw(format!("  {}  ", action.label)))];
+                            ListItem::new(content)
+                        })
+                        .collect();
+
+                    let col_title = {
+                        let inner = middle_chunks[col_idx].width as usize;
+                        let core = &title_text;
+                        if inner > core.len() + 2 {
+                            format!(" {} ", core)
+                        } else {
+                            core.clone()
+                        }
+                    };
+
+                    let mut list = List::new(items)
+                        .block(
+                            Block::default()
+                                .borders(Borders::ALL)
+                                .title(Span::styled(
+                                    col_title,
+                                    Style::default().add_modifier(Modifier::BOLD),
+                                ))
+                                .title_alignment(Alignment::Center),
+                        )
+                        // highlight the selected item; visually stronger when focused
+                        .highlight_style(if focused {
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD)
+                        } else {
+                            Style::default().fg(Color::Rgb(150, 150, 150))
+                        });
+
+                    if focused {
+                        list = list.highlight_symbol("► ");
                     } else {
-                        core.clone()
+                        list = list.highlight_symbol("  ");
                     }
+
+                    // render statefully so the List will scroll to keep the selected item visible
+                    f.render_stateful_widget(
+                        list,
+                        middle_chunks[col_idx],
+                        &mut app.columns[col_idx].list_state,
+                    );
+                }
+            } else {
+                // Details view replaces the columns in the middle area while keeping header/footer
+                let area = chunks[1];
+                let block = Block::default().borders(Borders::ALL).title(Span::styled(
+                    " Details ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ));
+                f.render_widget(block, area);
+
+                let inner = Rect {
+                    x: area.x + 1,
+                    y: area.y + 1,
+                    width: area.width.saturating_sub(2),
+                    height: area.height.saturating_sub(2),
                 };
 
-                let mut list = List::new(items)
-                    .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .title(Span::styled(
-                                col_title,
-                                Style::default().add_modifier(Modifier::BOLD),
-                            ))
-                            .title_alignment(Alignment::Center),
-                    )
-                    // highlight the selected item; visually stronger when focused
-                    .highlight_style(if focused {
-                        Style::default()
-                            .fg(Color::Yellow)
-                            .add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default().fg(Color::Rgb(150, 150, 150))
-                    });
+                // Build detailed content from the focused action
+                let mut lines: Vec<Spans> = Vec::new();
 
-                if focused {
-                    list = list.highlight_symbol("► ");
+                if let Some(action) = app.focused_action() {
+                    // Action label
+                    lines.push(Spans::from(vec![
+                        Span::styled("Action: ", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::raw(&action.label),
+                    ]));
+                    lines.push(Spans::from(Span::raw("")));
+
+                    // Description if present
+                    if let Some(ref desc) = action.description {
+                        lines.push(Spans::from(vec![
+                            Span::styled(
+                                "Description: ",
+                                Style::default().add_modifier(Modifier::BOLD),
+                            ),
+                            Span::raw(desc),
+                        ]));
+                        lines.push(Spans::from(Span::raw("")));
+                    }
+
+                    // Command template
+                    lines.push(Spans::from(vec![
+                        Span::styled("Command: ", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::styled(&action.template, Style::default().fg(Color::Cyan)),
+                    ]));
+                    lines.push(Spans::from(Span::raw("")));
+
+                    // Parameters
+                    if !action.parameters.is_empty() {
+                        lines.push(Spans::from(Span::styled(
+                            "Parameters:",
+                            Style::default().add_modifier(Modifier::BOLD),
+                        )));
+
+                        for param in &action.parameters {
+                            let required_marker = if param.required { " *" } else { "" };
+                            let param_type = format!("{:?}", param.param_type).to_lowercase();
+
+                            lines.push(Spans::from(vec![
+                                Span::raw("  "),
+                                Span::styled(&param.name, Style::default().fg(Color::Yellow)),
+                                Span::raw(format!(" ({}){}", param_type, required_marker)),
+                            ]));
+
+                            if let Some(ref desc) = param.description {
+                                lines.push(Spans::from(vec![
+                                    Span::raw("    "),
+                                    Span::styled(desc, Style::default().fg(Color::Rgb(150, 150, 150))),
+                                ]));
+                            }
+                        }
+                    }
                 } else {
-                    list = list.highlight_symbol("  ");
+                    lines.push(Spans::from(Span::raw("No action selected")));
                 }
 
-                // render statefully so the List will scroll to keep the selected item visible
-                f.render_stateful_widget(
-                    list,
-                    middle_chunks[col_idx],
-                    &mut app.columns[col_idx].list_state,
-                );
+                lines.push(Spans::from(Span::raw("")));
+                lines.push(Spans::from(Span::styled(
+                    "Press Enter or Esc to close | r: Run",
+                    Style::default().fg(Color::Rgb(100, 100, 100)),
+                )));
+
+                let text = Paragraph::new(lines)
+                    .alignment(Alignment::Left)
+                    .wrap(Wrap { trim: true });
+                f.render_widget(text, inner);
             }
 
-            // Bottom preview and help
-            // Reserve 3 rows for the preview (border + 1 inner line + border)
-            // and 3 rows for the help bar so the preview keeps its border and title
+            // Footer area: preview + help. Always present even when details are shown
             let bottom_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Length(3), Constraint::Length(3)].as_ref())
@@ -255,7 +344,7 @@ pub fn run_app(
 
             // Help bar content
             let help_text =
-                "Tab: switch column   Up/Down: navigate   Enter: details (e:Echo r:Run)   q: quit | *: Optional";
+                "Tab: switch column   Up/Down: navigate   Enter: details   r:Run   q: quit | *: Optional";
 
             // If the help area is tall enough, render a bordered block and draw the
             // help text inside the block inner rect. Otherwise render the help line
@@ -372,36 +461,20 @@ pub fn run_app(
                         }
                     }
                     KeyCode::Enter => {
-                        // show modal preview
-                        let (sel_text, _sel_index) = app.focused_selection();
-                        let command = app
-                            .focused_action()
-                            .map(|a| a.template.clone())
-                            .unwrap_or(sel_text);
-
-                        // show preview modal
-                        show_preview(terminal, &app)?;
-
-                        // after preview, simple prompt: Echo (dry-run) on 'e', Run on 'r'
-                        terminal.draw(|f| {
-                            let size = f.size();
-                            let msg = Paragraph::new(Spans::from(Span::raw(
-                                "Press 'e' to Echo (dry-run), 'r' to Run, any other key to cancel",
-                            )));
-                            f.render_widget(msg, size);
-                        })?;
-
-                        if crossterm::event::poll(Duration::from_millis(5000))? {
-                            if let Event::Key(k) = event::read()? {
-                                match k.code {
-                                    KeyCode::Char('e') => {
-                                        let _ = dry_run_command(terminal, &command);
-                                    }
-                                    KeyCode::Char('r') => {
-                                        let _ = run_command(terminal, &command);
-                                    }
-                                    _ => {}
-                                }
+                        // toggle details view in the middle area (header/footer remain)
+                        app.show_details = !app.show_details;
+                    }
+                    KeyCode::Esc => {
+                        // close details view if open
+                        if app.show_details {
+                            app.show_details = false;
+                        }
+                    }
+                    KeyCode::Char('r') => {
+                        // when details are shown, allow Run
+                        if app.show_details {
+                            if let Some(cmd) = app.focused_action().map(|a| a.template.clone()) {
+                                let _ = run_command(terminal, &cmd);
                             }
                         }
                     }
