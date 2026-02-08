@@ -78,16 +78,7 @@ impl App {
         }
     }
 
-    fn focused_selection(&self) -> (String, usize) {
-        if let Some(col) = self.columns.get(self.focused_column) {
-            if let Some(idx) = col.list_state.selected() {
-                if let Some(action) = col.actions.get(idx) {
-                    return (action.label.clone(), idx);
-                }
-            }
-        }
-        ("".into(), 0)
-    }
+    // removed unused focused_selection
 
     fn focused_action(&self) -> Option<&Action> {
         self.columns
@@ -219,10 +210,17 @@ pub fn run_app(
             } else {
                 // Details view replaces the columns in the middle area while keeping header/footer
                 let area = chunks[1];
-                let block = Block::default().borders(Borders::ALL).title(Span::styled(
-                    " Details ",
-                    Style::default().add_modifier(Modifier::BOLD),
-                ));
+
+                // Use the action label as the window title when available. Add a leading
+                // and trailing space for visual padding.
+                let title_text = app
+                    .focused_action()
+                    .map(|a| format!(" {} ", a.label))
+                    .unwrap_or_else(|| " Details ".to_string());
+
+                let block = Block::default()
+                    .borders(Borders::ALL)
+                    .title(Span::styled(title_text.as_str(), Style::default().add_modifier(Modifier::BOLD)));
                 f.render_widget(block, area);
 
                 let inner = Rect {
@@ -232,37 +230,10 @@ pub fn run_app(
                     height: area.height.saturating_sub(2),
                 };
 
-                // Build detailed content from the focused action
+                // Build detailed content from the focused action (parameters only)
                 let mut lines: Vec<Spans> = Vec::new();
 
                 if let Some(action) = app.focused_action() {
-                    // Action label
-                    lines.push(Spans::from(vec![
-                        Span::styled("Action: ", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(&action.label),
-                    ]));
-                    lines.push(Spans::from(Span::raw("")));
-
-                    // Description if present
-                    if let Some(ref desc) = action.description {
-                        lines.push(Spans::from(vec![
-                            Span::styled(
-                                "Description: ",
-                                Style::default().add_modifier(Modifier::BOLD),
-                            ),
-                            Span::raw(desc),
-                        ]));
-                        lines.push(Spans::from(Span::raw("")));
-                    }
-
-                    // Command template
-                    lines.push(Spans::from(vec![
-                        Span::styled("Command: ", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::styled(&action.template, Style::default().fg(Color::Cyan)),
-                    ]));
-                    lines.push(Spans::from(Span::raw("")));
-
-                    // Parameters
                     if !action.parameters.is_empty() {
                         lines.push(Spans::from(Span::styled(
                             "Parameters:",
@@ -286,6 +257,8 @@ pub fn run_app(
                                 ]));
                             }
                         }
+                    } else {
+                        lines.push(Spans::from(Span::raw("No parameters")));
                     }
                 } else {
                     lines.push(Spans::from(Span::raw("No action selected")));
@@ -293,7 +266,7 @@ pub fn run_app(
 
                 lines.push(Spans::from(Span::raw("")));
                 lines.push(Spans::from(Span::styled(
-                    "Press Enter or Esc to close | r: Run",
+                    " Press Enter to run or Esc to return to the main page ",
                     Style::default().fg(Color::Rgb(100, 100, 100)),
                 )));
 
@@ -511,129 +484,6 @@ pub fn run_app(
     }
 }
 
-fn show_preview(
-    terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
-    app: &App,
-) -> io::Result<()> {
-    loop {
-        terminal.draw(|f| {
-            let size = f.size();
-            let area = centered_rect(70, 60, size);
-            let block = Block::default().borders(Borders::ALL).title(Span::styled(
-                " Details ",
-                Style::default().add_modifier(Modifier::BOLD),
-            ));
-            f.render_widget(block, area);
+// removed old modal preview helper
 
-            let inner = Rect {
-                x: area.x + 1,
-                y: area.y + 1,
-                width: area.width.saturating_sub(2),
-                height: area.height.saturating_sub(2),
-            };
-
-            // Build detailed content from the focused action
-            let mut lines: Vec<Spans> = Vec::new();
-
-            if let Some(action) = app.focused_action() {
-                // Action label
-                lines.push(Spans::from(vec![
-                    Span::styled("Action: ", Style::default().add_modifier(Modifier::BOLD)),
-                    Span::raw(&action.label),
-                ]));
-                lines.push(Spans::from(Span::raw("")));
-
-                // Description if present
-                if let Some(ref desc) = action.description {
-                    lines.push(Spans::from(vec![
-                        Span::styled(
-                            "Description: ",
-                            Style::default().add_modifier(Modifier::BOLD),
-                        ),
-                        Span::raw(desc),
-                    ]));
-                    lines.push(Spans::from(Span::raw("")));
-                }
-
-                // Command template
-                lines.push(Spans::from(vec![
-                    Span::styled("Command: ", Style::default().add_modifier(Modifier::BOLD)),
-                    Span::styled(&action.template, Style::default().fg(Color::Cyan)),
-                ]));
-                lines.push(Spans::from(Span::raw("")));
-
-                // Parameters
-                if !action.parameters.is_empty() {
-                    lines.push(Spans::from(Span::styled(
-                        "Parameters:",
-                        Style::default().add_modifier(Modifier::BOLD),
-                    )));
-
-                    for param in &action.parameters {
-                        let required_marker = if param.required { " *" } else { "" };
-                        let param_type = format!("{:?}", param.param_type).to_lowercase();
-
-                        lines.push(Spans::from(vec![
-                            Span::raw("  "),
-                            Span::styled(&param.name, Style::default().fg(Color::Yellow)),
-                            Span::raw(format!(" ({}){}", param_type, required_marker)),
-                        ]));
-
-                        if let Some(ref desc) = param.description {
-                            lines.push(Spans::from(vec![
-                                Span::raw("    "),
-                                Span::styled(desc, Style::default().fg(Color::Rgb(150, 150, 150))),
-                            ]));
-                        }
-                    }
-                }
-            } else {
-                lines.push(Spans::from(Span::raw("No action selected")));
-            }
-
-            lines.push(Spans::from(Span::raw("")));
-            lines.push(Spans::from(Span::styled(
-                "Press Enter or Esc to close",
-                Style::default().fg(Color::Rgb(100, 100, 100)),
-            )));
-
-            let text = Paragraph::new(lines)
-                .alignment(Alignment::Left)
-                .wrap(Wrap { trim: true });
-            f.render_widget(text, inner);
-        })?;
-
-        if crossterm::event::poll(Duration::from_millis(200))? {
-            if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Esc | KeyCode::Enter => return Ok(()),
-                    _ => {}
-                }
-            }
-        }
-    }
-}
-
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
-
-    let vertical = popup_layout[1];
-
-    let horizontal_layout = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(vertical);
-
-    horizontal_layout[1]
-}
+// removed centered_rect helper
