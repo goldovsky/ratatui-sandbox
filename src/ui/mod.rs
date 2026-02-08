@@ -392,71 +392,93 @@ pub fn run_app(
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Tab => {
-                        let num_cols = app.column_count();
-                        if num_cols > 0 {
-                            app.focused_column = (app.focused_column + 1) % num_cols;
+                        // Only switch columns when details view is not open
+                        if !app.show_details {
+                            let num_cols = app.column_count();
+                            if num_cols > 0 {
+                                app.focused_column = (app.focused_column + 1) % num_cols;
+                            }
                         }
                     }
-                    KeyCode::Up => app.move_up(),
-                    KeyCode::Down => app.move_down(),
+                    KeyCode::Up => {
+                        if !app.show_details {
+                            app.move_up()
+                        }
+                    }
+                    KeyCode::Down => {
+                        if !app.show_details {
+                            app.move_down()
+                        }
+                    }
                     KeyCode::PageUp => {
-                        // move up by one page in the focused column
-                        let size = terminal.size()?;
-                        let title_lines = title_spans(&app.config.app.title);
-                        let title_height = (title_lines.len() as u16).saturating_add(1).max(3);
-                        // account for outer margin (1 top + 1 bottom)
-                        let middle_height = size
-                            .height
-                            .saturating_sub(2)
-                            .saturating_sub(title_height)
-                            .saturating_sub(6);
-                        let page = middle_height.saturating_sub(2).max(1) as usize; // inner height minus block borders
+                        // When details view is open, PageUp is reserved for details navigation;
+                        // ignore it here so the columns don't change.
+                        if !app.show_details {
+                            // move up by one page in the focused column
+                            let size = terminal.size()?;
+                            let title_lines = title_spans(&app.config.app.title);
+                            let title_height = (title_lines.len() as u16).saturating_add(1).max(3);
+                            // account for outer margin (1 top + 1 bottom)
+                            let middle_height = size
+                                .height
+                                .saturating_sub(2)
+                                .saturating_sub(title_height)
+                                .saturating_sub(6);
+                            let page = middle_height.saturating_sub(2).max(1) as usize; // inner height minus block borders
 
-                        if let Some(col) = app.columns.get_mut(app.focused_column) {
-                            if !col.actions.is_empty() {
-                                if let Some(curr) = col.list_state.selected() {
-                                    let new = curr.saturating_sub(page);
-                                    col.list_state.select(Some(new));
+                            if let Some(col) = app.columns.get_mut(app.focused_column) {
+                                if !col.actions.is_empty() {
+                                    if let Some(curr) = col.list_state.selected() {
+                                        let new = curr.saturating_sub(page);
+                                        col.list_state.select(Some(new));
+                                    }
                                 }
                             }
                         }
                     }
                     KeyCode::PageDown => {
-                        // move down by one page in the focused column
-                        let size = terminal.size()?;
-                        let title_lines = title_spans(&app.config.app.title);
-                        let title_height = (title_lines.len() as u16).saturating_add(1).max(3);
-                        let middle_height = size
-                            .height
-                            .saturating_sub(2)
-                            .saturating_sub(title_height)
-                            .saturating_sub(6);
-                        let page = middle_height.saturating_sub(2).max(1) as usize;
+                        // When details view is open, PageDown is reserved; ignore here
+                        if !app.show_details {
+                            // move down by one page in the focused column
+                            let size = terminal.size()?;
+                            let title_lines = title_spans(&app.config.app.title);
+                            let title_height = (title_lines.len() as u16).saturating_add(1).max(3);
+                            let middle_height = size
+                                .height
+                                .saturating_sub(2)
+                                .saturating_sub(title_height)
+                                .saturating_sub(6);
+                            let page = middle_height.saturating_sub(2).max(1) as usize;
 
-                        if let Some(col) = app.columns.get_mut(app.focused_column) {
-                            if !col.actions.is_empty() {
-                                if let Some(curr) = col.list_state.selected() {
-                                    let new =
-                                        (curr + page).min(col.actions.len().saturating_sub(1));
-                                    col.list_state.select(Some(new));
+                            if let Some(col) = app.columns.get_mut(app.focused_column) {
+                                if !col.actions.is_empty() {
+                                    if let Some(curr) = col.list_state.selected() {
+                                        let new =
+                                            (curr + page).min(col.actions.len().saturating_sub(1));
+                                        col.list_state.select(Some(new));
+                                    }
                                 }
                             }
                         }
                     }
                     KeyCode::Home => {
-                        // jump to top
-                        if let Some(col) = app.columns.get_mut(app.focused_column) {
-                            if !col.actions.is_empty() {
-                                col.list_state.select(Some(0));
+                        // jump to top (only when not showing details)
+                        if !app.show_details {
+                            if let Some(col) = app.columns.get_mut(app.focused_column) {
+                                if !col.actions.is_empty() {
+                                    col.list_state.select(Some(0));
+                                }
                             }
                         }
                     }
                     KeyCode::End => {
-                        // jump to bottom
-                        if let Some(col) = app.columns.get_mut(app.focused_column) {
-                            if !col.actions.is_empty() {
-                                col.list_state
-                                    .select(Some(col.actions.len().saturating_sub(1)));
+                        // jump to bottom (only when not showing details)
+                        if !app.show_details {
+                            if let Some(col) = app.columns.get_mut(app.focused_column) {
+                                if !col.actions.is_empty() {
+                                    col.list_state
+                                        .select(Some(col.actions.len().saturating_sub(1)));
+                                }
                             }
                         }
                     }
